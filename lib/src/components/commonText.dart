@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 Widget commonText(String text,
-    {Color color = Colors.white, bool isBold = false, double size = 12}) {
+    {Color color = Colors.white,
+    bool isBold = false,
+    double size = 12,
+    overflow = TextOverflow.ellipsis}) {
   return Text(
     text,
-    overflow: TextOverflow.ellipsis,
+    overflow: overflow,
     style: TextStyle(
         color: color,
         fontSize: size,
@@ -12,7 +15,8 @@ Widget commonText(String text,
   );
 }
 
-Widget commonButton(BuildContext context, String text, VoidCallback onPressed) {
+Widget commonButton(BuildContext context, String text, VoidCallback onPressed,
+    {double fontSize = 22}) {
   return GestureDetector(
     onTap: onPressed,
     child: Container(
@@ -44,8 +48,8 @@ Widget commonButton(BuildContext context, String text, VoidCallback onPressed) {
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 22,
+          style: TextStyle(
+            fontSize: fontSize,
             fontWeight: FontWeight.bold,
           ),
         ),
