@@ -1,5 +1,42 @@
 import 'package:flutter/material.dart';
 
+List<BrickType> brickTypes = [
+  BrickType('Standard', 100, 100),
+  BrickType('Unbreakable', 25, 200),
+  BrickType('Explosive', 5, 100),
+  BrickType('Healing', 5, 100),
+  BrickType('Invisible', 5, 100),
+  BrickType('Speed', 5, 100),
+  BrickType('Multi-Hit', 10, 100),
+  BrickType('Power-Up', 5, 100),
+];
+
+class BrickType {
+  final String name;
+  int health;
+  final int maxPercentage;
+
+  BrickType(this.name, this.maxPercentage, this.health);
+
+  // Convert a Map to BrickType (fromMap)
+  factory BrickType.fromMap(Map<String, dynamic> map) {
+    return BrickType(
+      map['name'] as String,
+      map['maxPercentage'] as int,
+      map['health'] as int,
+    );
+  }
+
+  // Convert a BrickType to Map (toMap)
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'maxPercentage': maxPercentage,
+      'health': health,
+    };
+  }
+}
+
 class TileModel {
   Offset position;
   String shape;
@@ -7,18 +44,23 @@ class TileModel {
   String? orientation;
   String? basePosition;
   double? rotationAngle;
+  BrickType brickType;
 
-  TileModel({
-    required this.position,
-    this.shape = 'Rectangle',
-    this.color = Colors.blueAccent,
-    this.orientation,
-    this.basePosition,
-    this.rotationAngle,
-  });
+  TileModel(
+      {required this.position,
+      this.shape = 'Rectangle',
+      this.color = Colors.blueAccent,
+      this.orientation,
+      this.basePosition,
+      this.rotationAngle,
+      required this.brickType});
 
   void updateShape(String newShape) {
     shape = newShape;
+  }
+
+  void updateBrickType(BrickType newBrickType) {
+    brickType = newBrickType;
   }
 
   void updateColor(Color newColor) {
@@ -45,10 +87,17 @@ class TileModel {
       'orientation': orientation,
       'basePosition': basePosition,
       'rotationAngle': rotationAngle,
+      'brickType': brickType.toMap()
     };
   }
 
   factory TileModel.fromMap(Map<String, dynamic> map) {
+    late BrickType localBrickType;
+    if (map['brickType'] == null) {
+      localBrickType = BrickType('Standard', 40, 100);
+    } else {
+      localBrickType = BrickType.fromMap(map['brickType']);
+    }
     return TileModel(
       position: Offset(map['position']['dx'], map['position']['dy']),
       shape: map['shape'],
@@ -56,19 +105,28 @@ class TileModel {
       orientation: map['orientation'],
       basePosition: map['basePosition'],
       rotationAngle: map['rotationAngle'],
+      brickType: localBrickType,
     );
   }
 }
 
 class GridData {
   Map<Offset, TileModel> tileAttributes;
+  bool isPlayable;
   int row;
   int column;
+  int? like, dislike, hard, medium, easy;
 
   GridData({
     required this.tileAttributes,
     required this.row,
+    required this.isPlayable,
     required this.column,
+    this.like,
+    this.dislike,
+    this.easy,
+    this.hard,
+    this.medium,
   });
 
   Map<String, dynamic> toMap() {
@@ -83,7 +141,13 @@ class GridData {
     return {
       'tileAttributes': tileAttributesToSave,
       'row': row,
-      'column': column
+      'column': column,
+      'isPlayable': isPlayable,
+      'like': like,
+      'dislike': dislike,
+      'hard': hard,
+      'easy': easy,
+      'medium': medium
     };
   }
 
@@ -92,8 +156,14 @@ class GridData {
     Map<String, dynamic> storedTileAttributes =
         map['tileAttributes'] as Map<String, dynamic>;
     return GridData(
+      isPlayable: map['isPlayable'] ?? false,
       row: map['row'],
       column: map['column'],
+      dislike: map['dislike'] ?? 0,
+      easy: map['easy'] ?? 0,
+      hard: map['hard'] ?? 0,
+      like: map['like'] ?? 0,
+      medium: map['medium'] ?? 0,
       tileAttributes: storedTileAttributes.map(
         (offsetString, tileData) {
           // Convert the offset string back to Offset

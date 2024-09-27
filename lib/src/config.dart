@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 const difficultyModifier = 1.02;
+const int balldamage = 50;
 const primaryColor = Color(0xFFEFEF5CE);
 
 class Config {
@@ -8,9 +9,13 @@ class Config {
   static late double batWidth;
   static late double batHeight;
   static late double batStep;
+  static late double screenWidth;
+  static late double screenHeight;
 
   // Function to initialize sizes based on screen width and height
-  static void initialize(double screenWidth, double screenHeight) {
+  static void initialize(BuildContext context) {
+    screenWidth = MediaQuery.sizeOf(context).width;
+    screenHeight = MediaQuery.sizeOf(context).height;
     const double ballPercentage = 0.02; // Ball is 4% of the screen width
     const double batWidthPercentage = 0.25; // Bat is 25% of the screen width
     const double batHeightPercentage =

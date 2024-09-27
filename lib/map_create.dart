@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'dart:math' as Math;
+
+import 'package:shatterforge/GridPainter.dart';
 
 import 'package:shatterforge/TileData.dart';
 import 'package:shatterforge/src/components/commonText.dart';
@@ -17,21 +19,36 @@ class _MapCreatePageState extends State<MapCreatePage> {
   int row = 10;
   int column = 10;
   Offset? selectedTile;
+  int unBreakable = 0;
 
   String selectedShape = 'Rectangle';
   String selectedOrientation = 'Bottom-left';
   String selectedBasePosition = "Bottom";
   Color currentColor = Colors.blueAccent;
+  String selectedBrickType = brickTypes[0].name;
 
   double selectedRotationAngle = 0;
+  Map<String, int> brickCounts = {
+    'Standard': 0,
+    'Unbreakable': 0,
+    'Explosive': 0,
+    'Healing': 0,
+    'Invisible': 0,
+    'Speed': 0,
+    'Multi-Hit': 0,
+    'Power-Up': 0,
+    'Shifting': 0,
+    'Special': 0,
+  };
+
+  int totalBricks = 100;
 
   Map<Offset, TileModel> tileAttributes = {};
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    callLoader();
+    _importGrid();
   }
 
   void onTapDown(TapDownDetails details, Size gridSize) {
@@ -40,16 +57,43 @@ class _MapCreatePageState extends State<MapCreatePage> {
     int tappedRow = (details.localPosition.dy / tileHeight).floor();
     int tappedColumn = (details.localPosition.dx / tileWidth).floor();
     Offset tappedTile = Offset(tappedColumn.toDouble(), tappedRow.toDouble());
-
     setState(() {
       selectedTile = tappedTile;
-      // If tapped tile does not exist, create a new TileModel
+
       if (!tileAttributes.containsKey(tappedTile)) {
-        tileAttributes[tappedTile] = TileModel(
-            position: tappedTile, color: currentColor, shape: selectedShape);
+        if (addBrick(selectedBrickType)) {
+          int currentIndex =
+              brickTypes.indexWhere((type) => type.name == selectedBrickType);
+
+          tileAttributes[tappedTile] = TileModel(
+              position: tappedTile,
+              color: (selectedBrickType == "Invisible")
+                  ? Colors.transparent
+                  : currentColor,
+              brickType: brickTypes[currentIndex],
+              shape: selectedShape);
+        } else {
+          for (int i = 0; i < brickTypes.length; i++) {
+            selectedBrickType = brickTypes[i].name;
+            if (addBrick(selectedBrickType)) {
+              tileAttributes[tappedTile] = TileModel(
+                  position: tappedTile,
+                  color: currentColor,
+                  brickType: brickTypes[i],
+                  shape: selectedShape);
+
+              break;
+            }
+          }
+        }
+        // tileAttributes[tappedTile] = TileModel(
+        //     position: tappedTile, color: currentColor, shape: selectedShape);
       } else {
         selectedShape = tileAttributes[tappedTile]!.shape;
-        currentColor = tileAttributes[tappedTile]!.color;
+        if (tileAttributes[tappedTile]!.color != Colors.transparent) {
+          currentColor = tileAttributes[tappedTile]!.color;
+        }
+        selectedBrickType = tileAttributes[tappedTile]!.brickType.name;
         if (tileAttributes[tappedTile]!.orientation != null) {
           selectedOrientation = tileAttributes[tappedTile]!.orientation!;
         }
@@ -64,30 +108,47 @@ class _MapCreatePageState extends State<MapCreatePage> {
   }
 
   void _exportGrid() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      showCommonSnackbar(
+        context,
+        message: 'Please join to create your 1st map.',
+        icon: Icons.error,
+      );
+      return;
+    }
     try {
-      GridData gridData =
-          GridData(row: row, column: column, tileAttributes: tileAttributes);
+      GridData gridData = GridData(
+          row: row,
+          column: column,
+          tileAttributes: tileAttributes,
+          isPlayable: true);
       await FirebaseFirestore.instance
-          .collection('tileData')
-          .doc('yourDocumentId')
+          .collection('Maps')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
           .set(gridData.toMap());
 
       print('Tile attributes successfully saved to Firestore');
+      showCommonSnackbar(
+        context,
+        message: 'Map successfully Updated.',
+        icon: Icons.save,
+      );
     } catch (e) {
       print('Error saving tile attributes to Firestore: $e');
+      showCommonSnackbar(
+        context,
+        message: 'An error occoured map could not saved successfully.',
+        icon: Icons.error,
+      );
     }
   }
 
-  void callLoader() async {
-    await loadTileAttributesFromFirestore();
-  }
-
-  Future<void> loadTileAttributesFromFirestore() async {
+  void _importGrid() async {
     try {
       // Retrieve the document from Firestore
       DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('tileData')
-          .doc('yourDocumentId')
+          .collection('Maps')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
           .get();
 
       if (snapshot.exists) {
@@ -97,6 +158,7 @@ class _MapCreatePageState extends State<MapCreatePage> {
 
         row = gridData.row;
         column = gridData.column;
+        totalBricks = row * column;
         tileAttributes = gridData.tileAttributes;
 
         setState(() {});
@@ -118,46 +180,27 @@ class _MapCreatePageState extends State<MapCreatePage> {
     });
   }
 
-  void updateTileShape(String shape) {
-    setState(() {
-      selectedShape = shape;
-      if (selectedTile != null) {
-        tileAttributes[selectedTile!]!.updateShape(shape);
-      }
-    });
+  bool canAddBrick(String brickType, int currentTotalBricks) {
+    int currentCount = brickCounts[brickType] ?? 0;
+    int maxAllowed =
+        (brickTypes.firstWhere((type) => type.name == brickType).maxPercentage *
+                totalBricks) ~/
+            100;
+
+    return currentCount < maxAllowed;
   }
 
-  void updateTileOrientation(String orientation) {
-    setState(() {
-      selectedOrientation = orientation;
-      if (selectedTile != null &&
-          tileAttributes[selectedTile!]!.shape == 'Right Triangle') {
-        tileAttributes[selectedTile!]!.updateOrientation(orientation);
-      }
-    });
-  }
+  bool addBrick(String brickType) {
+    int currentTotalBricks = brickCounts.values.reduce((a, b) => a + b);
 
-  void updateBasePosition(String basePosition) {
-    setState(() {
-      selectedBasePosition = basePosition;
-      if (selectedTile != null &&
-          (tileAttributes[selectedTile!]!.shape == 'Triangle' ||
-              tileAttributes[selectedTile!]!.shape == 'Parallelogram' ||
-              tileAttributes[selectedTile!]!.shape == 'Trapezium')) {
-        tileAttributes[selectedTile!]!.updateBasePosition(basePosition);
-      }
-    });
-  }
-
-  void updateRotationAngle(double angle) {
-    setState(() {
-      selectedRotationAngle = angle;
-      if (selectedTile != null &&
-          (tileAttributes[selectedTile!]!.shape == 'Pentagon' ||
-              tileAttributes[selectedTile!]!.shape == 'Hexagon')) {
-        tileAttributes[selectedTile!]!.updateRotationAngle(angle);
-      }
-    });
+    if (canAddBrick(brickType, currentTotalBricks)) {
+      brickCounts[brickType] = (brickCounts[brickType] ?? 0) + 1;
+      print('Added $brickType brick');
+      return true;
+    } else {
+      print('Cannot add more $brickType bricks, limit reached');
+      return false;
+    }
   }
 
   @override
@@ -229,6 +272,7 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                   onChanged: (value) {
                                     setState(() {
                                       row = int.tryParse(value) ?? defaultRow;
+                                      totalBricks = row * column;
                                     });
                                   },
                                 ),
@@ -265,6 +309,7 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                     setState(() {
                                       column =
                                           int.tryParse(value) ?? defaultColumn;
+                                      totalBricks = row * column;
                                     });
                                   },
                                 ),
@@ -407,6 +452,63 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                     ),
                                   ],
                                 ),
+                                //break type
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: commonText("Brick type",
+                                          isBold: true),
+                                    ),
+                                    Expanded(
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          FittedBox(
+                                            child: DropdownButton<String>(
+                                              dropdownColor: Colors.black54,
+                                              value: selectedBrickType,
+                                              onChanged: (String? newValue) {
+                                                setState(() {
+                                                  selectedBrickType = newValue!;
+
+                                                  if (selectedTile != null) {
+                                                    int index = brickTypes
+                                                        .indexWhere((type) =>
+                                                            type.name ==
+                                                            newValue);
+                                                    tileAttributes[
+                                                                selectedTile!]!
+                                                            .brickType =
+                                                        brickTypes[index];
+                                                    if (newValue ==
+                                                        "Invisible") {
+                                                      tileAttributes[
+                                                                  selectedTile!]!
+                                                              .color =
+                                                          Colors.transparent;
+                                                    }
+                                                  }
+                                                });
+                                              },
+                                              items: brickTypes
+                                                  .map((BrickType brickType) {
+                                                return DropdownMenuItem<String>(
+                                                  value: brickType.name,
+                                                  child: commonText(
+                                                      brickType.name),
+                                                );
+                                              }).toList(),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                //break type end
+
                                 Visibility(
                                   visible: selectedShape == "Right Triangle",
                                   child: Row(
@@ -562,282 +664,5 @@ class _MapCreatePageState extends State<MapCreatePage> {
         ],
       ),
     );
-  }
-}
-
-class GridPainter extends CustomPainter {
-  final int rows;
-  final int columns;
-  final Map<Offset, TileModel> tileAttributes;
-
-  GridPainter(this.rows, this.columns, this.tileAttributes);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    double tileWidth = size.width / columns;
-    double tileHeight = size.height / rows;
-
-    Paint borderPaint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke;
-
-    for (int row = 0; row < rows; row++) {
-      for (int col = 0; col < columns; col++) {
-        Rect tileRect = Rect.fromLTWH(
-            col * tileWidth, row * tileHeight, tileWidth, tileHeight);
-        Offset tileOffset = Offset(col.toDouble(), row.toDouble());
-
-        TileModel? attributes = tileAttributes[tileOffset];
-        if (attributes != null) {
-          Paint fillPaint = Paint()
-            ..color = attributes.color
-            ..style = PaintingStyle.fill;
-
-          switch (attributes.shape) {
-            case 'Ellipse':
-              canvas.drawOval(tileRect, fillPaint);
-              break;
-            case 'Triangle':
-              _drawTriangle(canvas, fillPaint, tileRect,
-                  basePosition: attributes.basePosition ?? 'Bottom');
-              break;
-            case 'Right Triangle':
-              _drawRightTriangle(canvas, fillPaint, tileRect,
-                  orientation: attributes.orientation ?? 'Bottom-left');
-              break;
-            case 'Rectangle':
-              canvas.drawRect(tileRect, fillPaint);
-              break;
-            case 'Parallelogram':
-              _drawParallelogram(canvas, fillPaint, tileRect,
-                  slantDirection: attributes.basePosition ?? 'Right');
-              break;
-            case 'Trapezium':
-              _drawTrapezoid(canvas, fillPaint, tileRect,
-                  basePosition: attributes.basePosition ?? 'Bottom');
-              break;
-            case 'Hexagon':
-              _drawPolygon(canvas, fillPaint, tileRect, 6,
-                  rotationAngle: attributes.rotationAngle ?? 0);
-              break;
-            case 'Pentagon':
-              _drawPolygon(canvas, fillPaint, tileRect, 5,
-                  rotationAngle: attributes.rotationAngle ?? 0);
-              break;
-            case 'Kite':
-              _drawKite(canvas, fillPaint, tileRect);
-              break;
-          }
-        }
-
-        canvas.drawRect(tileRect, borderPaint);
-      }
-    }
-  }
-
-  void _drawTriangle(Canvas canvas, Paint paint, Rect rect,
-      {required String basePosition}) {
-    Path path = Path();
-
-    switch (basePosition) {
-      case 'Bottom':
-        path.moveTo(rect.center.dx, rect.top); // Top vertex
-        path.lineTo(rect.left, rect.bottom); // Bottom-left vertex
-        path.lineTo(rect.right, rect.bottom); // Bottom-right vertex
-        break;
-
-      case 'Top':
-        path.moveTo(rect.center.dx, rect.bottom); // Bottom vertex
-        path.lineTo(rect.left, rect.top); // Top-left vertex
-        path.lineTo(rect.right, rect.top); // Top-right vertex
-        break;
-
-      case 'Left':
-        path.moveTo(rect.right, rect.center.dy); // Right vertex
-        path.lineTo(rect.left, rect.top); // Top-left vertex
-        path.lineTo(rect.left, rect.bottom); // Bottom-left vertex
-        break;
-
-      case 'Right':
-        path.moveTo(rect.left, rect.center.dy); // Left vertex
-        path.lineTo(rect.right, rect.top); // Top-right vertex
-        path.lineTo(rect.right, rect.bottom); // Bottom-right vertex
-        break;
-    }
-
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawRightTriangle(Canvas canvas, Paint paint, Rect rect,
-      {required String orientation}) {
-    Path path = Path();
-
-    switch (orientation) {
-      case 'Bottom-left':
-        path.moveTo(rect.left, rect.top); // Top-left
-        path.lineTo(rect.right, rect.bottom); // Bottom-right
-        path.lineTo(rect.left, rect.bottom); // Bottom-left (90-degree)
-        break;
-
-      case 'Top-left':
-        path.moveTo(rect.left, rect.bottom); // Bottom-left
-        path.lineTo(rect.right, rect.top); // Top-right
-        path.lineTo(rect.left, rect.top); // Top-left (90-degree)
-        break;
-
-      case 'Bottom-right':
-        path.moveTo(rect.right, rect.top); // Top-right
-        path.lineTo(rect.left, rect.bottom); // Bottom-left
-        path.lineTo(rect.right, rect.bottom); // Bottom-right (90-degree)
-        break;
-
-      case 'Top-right':
-        path.moveTo(rect.right, rect.bottom); // Bottom-right
-        path.lineTo(rect.left, rect.top); // Top-left
-        path.lineTo(rect.right, rect.top); // Top-right (90-degree)
-        break;
-    }
-
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawKite(Canvas canvas, Paint paint, Rect rect) {
-    Path path = Path();
-    path.moveTo(rect.center.dx, rect.top);
-    path.lineTo(rect.left, rect.center.dy);
-    path.lineTo(rect.center.dx, rect.bottom);
-    path.lineTo(rect.right, rect.center.dy);
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawParallelogram(Canvas canvas, Paint paint, Rect rect,
-      {required String slantDirection}) {
-    Path path = Path();
-
-    switch (slantDirection) {
-      case 'Right':
-        // Parallelogram slanting towards the right
-        path.moveTo(
-            rect.left + rect.width / 4, rect.top); // Top-left vertex (offset)
-        path.lineTo(rect.right, rect.top); // Top-right vertex
-        path.lineTo(rect.right - rect.width / 4,
-            rect.bottom); // Bottom-right vertex (offset)
-        path.lineTo(rect.left, rect.bottom); // Bottom-left vertex
-        break;
-
-      case 'Left':
-        // Parallelogram slanting towards the left
-        path.moveTo(rect.left, rect.top); // Top-left vertex
-        path.lineTo(
-            rect.right - rect.width / 4, rect.top); // Top-right vertex (offset)
-        path.lineTo(rect.right, rect.bottom); // Bottom-right vertex
-        path.lineTo(rect.left + rect.width / 4,
-            rect.bottom); // Bottom-left vertex (offset)
-        break;
-
-      case 'Top':
-        // Parallelogram slanting upwards
-        path.moveTo(
-            rect.left, rect.top + rect.height / 4); // Top-left vertex (offset)
-        path.lineTo(rect.right, rect.top); // Top-right vertex
-        path.lineTo(rect.right,
-            rect.bottom - rect.height / 4); // Bottom-right vertex (offset)
-        path.lineTo(rect.left, rect.bottom); // Bottom-left vertex
-        break;
-
-      case 'Bottom':
-        // Parallelogram slanting downwards
-        path.moveTo(rect.left, rect.top); // Top-left vertex
-        path.lineTo(rect.right,
-            rect.top + rect.height / 4); // Top-right vertex (offset)
-        path.lineTo(rect.right, rect.bottom); // Bottom-right vertex
-        path.lineTo(rect.left,
-            rect.bottom - rect.height / 4); // Bottom-left vertex (offset)
-        break;
-    }
-
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawTrapezoid(Canvas canvas, Paint paint, Rect rect,
-      {required String basePosition}) {
-    Path path = Path();
-
-    switch (basePosition) {
-      case 'Bottom':
-        // Trapezoid with the longer base at the bottom
-        path.moveTo(
-            rect.left + rect.width / 4, rect.top); // Top-left vertex (offset)
-        path.lineTo(
-            rect.right - rect.width / 4, rect.top); // Top-right vertex (offset)
-        path.lineTo(rect.right, rect.bottom); // Bottom-right vertex
-        path.lineTo(rect.left, rect.bottom); // Bottom-left vertex
-        break;
-
-      case 'Top':
-        // Trapezoid with the longer base at the top
-        path.moveTo(rect.left, rect.top); // Top-left vertex
-        path.lineTo(rect.right, rect.top); // Top-right vertex
-        path.lineTo(rect.right - rect.width / 4,
-            rect.bottom); // Bottom-right vertex (offset)
-        path.lineTo(rect.left + rect.width / 4,
-            rect.bottom); // Bottom-left vertex (offset)
-        break;
-
-      case 'Left':
-        // Trapezoid with the longer base on the left side
-        path.moveTo(rect.left, rect.top); // Top-left vertex
-        path.lineTo(rect.left, rect.bottom); // Bottom-left vertex
-        path.lineTo(rect.right,
-            rect.bottom - rect.height / 4); // Bottom-right vertex (offset)
-        path.lineTo(rect.right,
-            rect.top + rect.height / 4); // Top-right vertex (offset)
-        break;
-
-      case 'Right':
-        // Trapezoid with the longer base on the right side
-        path.moveTo(rect.right, rect.top); // Top-right vertex
-        path.lineTo(rect.right, rect.bottom); // Bottom-right vertex
-        path.lineTo(rect.left,
-            rect.bottom - rect.height / 4); // Bottom-left vertex (offset)
-        path.lineTo(
-            rect.left, rect.top + rect.height / 4); // Top-left vertex (offset)
-        break;
-    }
-
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawPolygon(Canvas canvas, Paint paint, Rect rect, int sides,
-      {double rotationAngle = 0}) {
-    double centerX = rect.center.dx;
-    double centerY = rect.center.dy;
-    double radius = rect.width / 2;
-
-    Path path = Path();
-    double angle = (2 * 3.141592653589793) / sides;
-
-    for (int i = 0; i < sides; i++) {
-      // Apply the rotation angle
-      double x = centerX + radius * Math.cos(i * angle + rotationAngle);
-      double y = centerY + radius * Math.sin(i * angle + rotationAngle);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return oldDelegate != this;
   }
 }

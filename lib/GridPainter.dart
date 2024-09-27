@@ -1,113 +1,74 @@
-// import 'package:flame/collisions.dart';
-// import 'package:flame/components.dart';
-// import 'package:flutter/material.dart';
-
-// import '../brick_breaker.dart';
-// import '../config.dart';
-// import 'ball.dart';
-// import 'bat.dart';
-
-// class Brick extends RectangleComponent
-//     with CollisionCallbacks, HasGameReference<BrickBreaker> {
-//   Brick({required super.position, required Color color})
-//       : super(
-//           size: Vector2(brickWidth, brickHeight),
-//           anchor: Anchor.center,
-//           paint: Paint()
-//             ..color = color
-//             ..style = PaintingStyle.fill,
-//           children: [RectangleHitbox()],
-//         );
-
-//   @override
-//   void onCollisionStart(
-//       Set<Vector2> intersectionPoints, PositionComponent other) {
-//     super.onCollisionStart(intersectionPoints, other);
-//     removeFromParent();
-
-//     if (game.world.children.query<Brick>().length == 1) {
-//       game.world.removeAll(game.world.children.query<Ball>());
-//       game.world.removeAll(game.world.children.query<Bat>());
-//     }
-//   }
-// }
-
-import 'package:flame/collisions.dart';
-import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:shatterforge/TileData.dart';
 import 'dart:math' as Math;
 
-import 'package:shatterforge/src/brick_breaker.dart';
-import 'package:shatterforge/src/components/Bat.dart';
-import 'package:shatterforge/src/components/ball.dart';
-import 'package:shatterforge/src/config.dart';
+class GridPainter extends CustomPainter {
+  final int rows;
+  final int columns;
+  final Map<Offset, TileModel> tileAttributes;
 
-class Brick extends PositionComponent
-    with CollisionCallbacks, HasGameReference<BrickBreaker> {
-  final TileModel tileData;
-
-  Brick(
-      {required this.tileData, required super.size, required super.position}) {
-    switch (tileData.shape) {
-      case 'Rectangle':
-        add(RectangleHitbox()); // For rectangles
-        break;
-      case 'Ellipse':
-        add(CircleHitbox()); // For ellipses
-        break;
-      default:
-        add(RectangleHitbox()); // Default to rectangle hitbox if not handled
-        break;
-    }
-  }
+  GridPainter(this.rows, this.columns, this.tileAttributes);
 
   @override
-  void render(Canvas canvas) {
-    super.render(canvas);
+  void paint(Canvas canvas, Size size) {
+    double tileWidth = size.width / columns;
+    double tileHeight = size.height / rows;
 
-    super.render(canvas);
+    Paint borderPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke;
 
-    Paint fillPaint = Paint()
-      ..color = tileData.color
-      ..style = PaintingStyle.fill;
+    for (int row = 0; row < rows; row++) {
+      for (int col = 0; col < columns; col++) {
+        Rect tileRect = Rect.fromLTWH(
+            col * tileWidth, row * tileHeight, tileWidth, tileHeight);
+        Offset tileOffset = Offset(col.toDouble(), row.toDouble());
 
-    Rect tileRect = Rect.fromLTWH(0, 0, size.x, size.y);
+        TileModel? attributes = tileAttributes[tileOffset];
+        if (attributes != null) {
+          Paint fillPaint = Paint()
+            ..color = attributes.color
+            ..style = PaintingStyle.fill;
 
-    switch (tileData.shape) {
-      case 'Ellipse':
-        canvas.drawOval(tileRect, fillPaint);
-        break;
-      case 'Triangle':
-        _drawTriangle(canvas, fillPaint, tileRect,
-            basePosition: tileData.basePosition ?? 'Bottom');
-        break;
-      case 'Right Triangle':
-        _drawRightTriangle(canvas, fillPaint, tileRect,
-            orientation: tileData.orientation ?? 'Bottom-left');
-        break;
-      case 'Rectangle':
-        canvas.drawRect(tileRect, fillPaint);
-        break;
-      case 'Parallelogram':
-        _drawParallelogram(canvas, fillPaint, tileRect,
-            slantDirection: tileData.basePosition ?? 'Right');
-        break;
-      case 'Trapezium':
-        _drawTrapezoid(canvas, fillPaint, tileRect,
-            basePosition: tileData.basePosition ?? 'Bottom');
-        break;
-      case 'Hexagon':
-        _drawPolygon(canvas, fillPaint, tileRect, 6,
-            rotationAngle: tileData.rotationAngle ?? 0);
-        break;
-      case 'Pentagon':
-        _drawPolygon(canvas, fillPaint, tileRect, 5,
-            rotationAngle: tileData.rotationAngle ?? 0);
-        break;
-      case 'Kite':
-        _drawKite(canvas, fillPaint, tileRect);
-        break;
+          switch (attributes.shape) {
+            case 'Ellipse':
+              canvas.drawOval(tileRect, fillPaint);
+              break;
+            case 'Triangle':
+              _drawTriangle(canvas, fillPaint, tileRect,
+                  basePosition: attributes.basePosition ?? 'Bottom');
+              break;
+            case 'Right Triangle':
+              _drawRightTriangle(canvas, fillPaint, tileRect,
+                  orientation: attributes.orientation ?? 'Bottom-left');
+              break;
+            case 'Rectangle':
+              canvas.drawRect(tileRect, fillPaint);
+              break;
+            case 'Parallelogram':
+              _drawParallelogram(canvas, fillPaint, tileRect,
+                  slantDirection: attributes.basePosition ?? 'Right');
+              break;
+            case 'Trapezium':
+              _drawTrapezoid(canvas, fillPaint, tileRect,
+                  basePosition: attributes.basePosition ?? 'Bottom');
+              break;
+            case 'Hexagon':
+              _drawPolygon(canvas, fillPaint, tileRect, 6,
+                  rotationAngle: attributes.rotationAngle ?? 0);
+              break;
+            case 'Pentagon':
+              _drawPolygon(canvas, fillPaint, tileRect, 5,
+                  rotationAngle: attributes.rotationAngle ?? 0);
+              break;
+            case 'Kite':
+              _drawKite(canvas, fillPaint, tileRect);
+              break;
+          }
+        }
+
+        canvas.drawRect(tileRect, borderPaint);
+      }
     }
   }
 
@@ -313,26 +274,7 @@ class Brick extends PositionComponent
   }
 
   @override
-  void onCollisionStart(
-      Set<Vector2> intersectionPoints, PositionComponent other) {
-    super.onCollisionStart(intersectionPoints, other);
-    if (other is Ball) {
-      if (tileData.brickType.name == "Invisible" &&
-          tileData.color == Colors.transparent) {
-        tileData.color = Colors.white;
-      }
-
-      if (tileData.brickType.health <= 0) {
-        removeFromParent();
-      } else {
-        tileData.brickType.health -= balldamage;
-      }
-
-      if (game.world.children.query<Brick>().length == 1) {
-        game.playState = PlayState.won;
-        game.world.removeAll(game.world.children.query<Ball>());
-        game.world.removeAll(game.world.children.query<Bat>());
-      }
-    }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return oldDelegate != this;
   }
 }

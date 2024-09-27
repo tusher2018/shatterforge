@@ -19,16 +19,20 @@ class Ball extends CircleComponent
             radius: radius,
             anchor: Anchor.center,
             paint: Paint()
-              ..color = const Color(0xff1e6091)
+              ..color = Colors.yellow.shade50
               ..style = PaintingStyle.fill,
             children: [CircleHitbox()]);
 
   final Vector2 velocity;
+
   final double difficultyModifier; // Add this member
 
   @override
   void update(double dt) {
     super.update(dt);
+    if (game.playState != PlayState.playing) {
+      return;
+    }
     position += velocity * dt;
   }
 
@@ -36,6 +40,7 @@ class Ball extends CircleComponent
   void onCollisionStart(
       Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
+
     if (other is PlayArea) {
       if (intersectionPoints.first.y <= 0) {
         velocity.y = -velocity.y;
@@ -45,8 +50,10 @@ class Ball extends CircleComponent
         velocity.x = -velocity.x;
       } else if (intersectionPoints.first.y >= game.height) {
         add(RemoveEffect(
-          delay: 0.35,
-        ));
+            delay: 0.35,
+            onComplete: () {
+              game.playState = PlayState.gameOver;
+            }));
       }
     } else if (other is Bat) {
       velocity.y = -velocity.y;

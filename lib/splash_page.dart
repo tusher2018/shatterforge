@@ -2,6 +2,7 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shatterforge/all_match.dart';
 import 'package:shatterforge/map_create.dart';
 import 'package:shatterforge/src/components/commonText.dart';
 import 'package:shatterforge/src/config.dart';
@@ -262,7 +263,14 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
                         children: [
                           _buildCustomButton("Join", _transitionToSignInForm,
                               100, _exitButtons),
-                          _buildCustomButton("Play", () {}, 400, _exitButtons),
+                          _buildCustomButton("Play", () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AllMatch(),
+                              ),
+                            );
+                          }, 400, _exitButtons),
                           _buildCustomButton("Maps", () {
                             Navigator.push(
                               context,
