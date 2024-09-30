@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 List<BrickType> brickTypes = [
-  BrickType('Standard', 100, 100),
+  BrickType('Standard', 40, 100),
   BrickType('Unbreakable', 25, 200),
   BrickType('Explosive', 5, 100),
-  BrickType('Healing', 5, 100),
-  BrickType('Invisible', 5, 100),
   BrickType('Speed', 5, 100),
+  BrickType('Invisible', 5, 100),
   BrickType('Multi-Hit', 10, 100),
   BrickType('Power-Up', 5, 100),
 ];
@@ -113,20 +112,22 @@ class TileModel {
 class GridData {
   Map<Offset, TileModel> tileAttributes;
   bool isPlayable;
+  String userId;
   int row;
   int column;
-  int? like, dislike, hard, medium, easy;
+  int like, dislike, hard, medium, easy;
 
   GridData({
+    required this.userId,
     required this.tileAttributes,
     required this.row,
     required this.isPlayable,
     required this.column,
-    this.like,
-    this.dislike,
-    this.easy,
-    this.hard,
-    this.medium,
+    required this.like,
+    required this.dislike,
+    required this.easy,
+    required this.hard,
+    required this.medium,
   });
 
   Map<String, dynamic> toMap() {
@@ -147,7 +148,8 @@ class GridData {
       'dislike': dislike,
       'hard': hard,
       'easy': easy,
-      'medium': medium
+      'medium': medium,
+      'userId': userId,
     };
   }
 
@@ -156,6 +158,7 @@ class GridData {
     Map<String, dynamic> storedTileAttributes =
         map['tileAttributes'] as Map<String, dynamic>;
     return GridData(
+      userId: map['userId'] ?? "",
       isPlayable: map['isPlayable'] ?? false,
       row: map['row'],
       column: map['column'],

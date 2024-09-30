@@ -39,7 +39,7 @@ import 'package:shatterforge/TileData.dart';
 import 'dart:math' as Math;
 
 import 'package:shatterforge/src/brick_breaker.dart';
-import 'package:shatterforge/src/components/Bat.dart';
+
 import 'package:shatterforge/src/components/ball.dart';
 import 'package:shatterforge/src/config.dart';
 
@@ -325,13 +325,7 @@ class Brick extends PositionComponent
       if (tileData.brickType.health <= 0) {
         removeFromParent();
       } else {
-        tileData.brickType.health -= balldamage;
-      }
-
-      if (game.world.children.query<Brick>().length == 1) {
-        game.playState = PlayState.won;
-        game.world.removeAll(game.world.children.query<Ball>());
-        game.world.removeAll(game.world.children.query<Bat>());
+        tileData.brickType.health -= Config.balldamage;
       }
     }
   }

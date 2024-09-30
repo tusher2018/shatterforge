@@ -1,9 +1,13 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shatterforge/all_match.dart';
 import 'package:shatterforge/map_create.dart';
+import 'package:shatterforge/playerModel.dart';
+import 'package:shatterforge/player_update.dart';
+import 'package:shatterforge/profile.dart';
 import 'package:shatterforge/src/components/commonText.dart';
 import 'package:shatterforge/src/config.dart';
 
@@ -13,6 +17,7 @@ class CombinedSplashHomePage extends StatefulWidget {
 }
 
 class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
+  PlayerModel? _playerData;
   bool _logoAtCenter = true;
   bool _showButtons = false;
   bool _showSignInForm = false;
@@ -53,9 +58,41 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
     });
   }
 
+  Future<void> _loadPlayerData(String userId) async {
+    try {
+      // Reference to Firestore collection
+      final playerDoc = await FirebaseFirestore.instance
+          .collection('players')
+          .doc(userId)
+          .get();
+
+      if (playerDoc.exists) {
+        // Create PlayerModel from the data
+        PlayerModel playerData = PlayerModel.fromMap(playerDoc.data()!);
+
+        // Update state with player data
+        setState(() {
+          _playerData = playerData;
+        });
+
+        print('Player data loaded successfully');
+      } else {
+        print('No player data found for this user.');
+      }
+    } catch (e) {
+      print('Failed to load player data: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+
+    // Check if the user is logged in, and if so, load their data
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _loadPlayerData(user.uid);
+    }
 
     // Simulate initial splash logo animation
     Future.delayed(const Duration(seconds: 2), () {
@@ -70,53 +107,6 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
         });
       });
     });
-  }
-
-  // Build custom button with enter/exit animations
-  Widget _buildCustomButton(
-      String text, VoidCallback onPressed, double delay, bool exitButton) {
-    return TweenAnimationBuilder(
-      tween: Tween<Offset>(
-        begin: exitButton ? Offset.zero : const Offset(1.5, 0), // Entry
-        end: exitButton ? const Offset(1.5, 0) : Offset.zero, // Exit animation
-      ),
-      duration: Duration(milliseconds: delay.toInt()),
-      curve: Curves.ease,
-      builder: (context, Offset offset, child) {
-        return Transform.translate(
-          offset: Offset(MediaQuery.of(context).size.width * offset.dx, 0),
-          child: child,
-        );
-      },
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          width: MediaQuery.of(context).size.width * 0.4,
-          height: 50,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFEF5CE),
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: const [
-              BoxShadow(color: Colors.black, blurRadius: 6),
-              BoxShadow(
-                  color: Colors.black,
-                  blurRadius: 6,
-                  blurStyle: BlurStyle.inner),
-            ],
-            border: Border.all(color: Colors.black, width: 2.5),
-          ),
-          child: Center(
-            child: commonText(
-              text,
-              color: Colors.black,
-              size: 22,
-              isBold: true,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   // Build Sign-In Form with enter/exit animations
@@ -236,7 +226,7 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
               'assets/images/background.jpg',
               fit: BoxFit.cover,
             ),
-            // Animated logo
+
             AnimatedPositioned(
               duration: const Duration(seconds: 1),
               curve: Curves.easeInOut,
@@ -250,7 +240,7 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
                 width: MediaQuery.of(context).size.width * 0.7,
               ),
             ),
-            // Buttons or Sign-In Form based on state
+
             Positioned(
               bottom: 50,
               left: 0,
@@ -261,25 +251,106 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
                     ? Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildCustomButton("Join", _transitionToSignInForm,
-                              100, _exitButtons),
-                          _buildCustomButton("Play", () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AllMatch(),
+                          iconsBuild(
+                            "assets/images/play.png",
+                            "Play",
+                            size: 120,
+                            delay: 300,
+                            color: Colors.black,
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AllMatch(),
+                                ),
+                              );
+                            },
+                            exitButton: _exitButtons,
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              iconsBuild("assets/images/join.png", "Join",
+                                  _transitionToSignInForm,
+                                  size: 80,
+                                  delay: 300,
+                                  exitButton: _exitButtons),
+                              iconsBuild("assets/images/map.png", "Map", () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MapCreatePage(),
+                                  ),
+                                );
+                              },
+                                  color: Colors.black,
+                                  delay: 600,
+                                  exitButton: _exitButtons),
+                              iconsBuild(
+                                  "assets/images/rank.png",
+                                  "LeaderShip",
+                                  delay: 900,
+                                  exitButton: _exitButtons,
+                                  () {}),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              iconsBuild(
+                                delay: 900,
+                                exitButton: _exitButtons,
+                                "assets/images/update.png",
+                                "Update",
+                                () {
+                                  if (_playerData == null) {
+                                    showCommonSnackbar(
+                                      context,
+                                      message: 'Make sure you joined!',
+                                      icon: Icons.error,
+                                    );
+                                    return;
+                                  }
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PlayerUpgradePage(
+                                        playerModel: _playerData!,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          }, 400, _exitButtons),
-                          _buildCustomButton("Maps", () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => MapCreatePage(),
-                              ),
-                            );
-                          }, 700, _exitButtons),
-                          _buildCustomButton("Rank", () {}, 1000, _exitButtons),
+                              iconsBuild(
+                                  "assets/images/profile.png",
+                                  delay: 1200,
+                                  exitButton: _exitButtons,
+                                  "Profile", () {
+                                if (_playerData == null) {
+                                  showCommonSnackbar(
+                                    context,
+                                    message: 'Make sure you joined!',
+                                    icon: Icons.error,
+                                  );
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => PlayerProfilePage(
+                                            profile: _playerData!,
+                                          )),
+                                );
+                              }),
+                              iconsBuild(
+                                  "assets/images/settings.png",
+                                  delay: 1500,
+                                  exitButton: _exitButtons,
+                                  "Settings",
+                                  () {}),
+                            ],
+                          )
                         ],
                       )
                     : _showSignInForm
@@ -293,9 +364,49 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
     );
   }
 
-// Sign-up function
+  Widget iconsBuild(String Path, String name, VoidCallback onPressed,
+      {double size = 50,
+      Color color = primaryColor,
+      required double delay,
+      required bool exitButton}) {
+    return TweenAnimationBuilder(
+      tween: Tween<Offset>(
+        begin: exitButton ? Offset.zero : const Offset(1.5, 0), // Entry
+        end: exitButton ? const Offset(1.5, 0) : Offset.zero, // Exit animation
+      ),
+      duration: Duration(milliseconds: delay.toInt()),
+      curve: Curves.ease,
+      builder: (context, Offset offset, child) {
+        return Transform.translate(
+          offset: Offset(MediaQuery.of(context).size.width * offset.dx, 0),
+          child: child,
+        );
+      },
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              Path,
+              height: size,
+              width: size,
+            ),
+            if ((size != 120))
+              const SizedBox(
+                height: 10,
+              ),
+            commonText(name,
+                isBold: true, size: (size == 120) ? 24 : 14, color: color)
+          ],
+        ),
+      ),
+    );
+  }
+
   void _signUpUser(BuildContext context, String email, String password) async {
     final FirebaseAuth auth = FirebaseAuth.instance;
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
     if (email.isEmpty) {
       showCommonSnackbar(context,
@@ -309,13 +420,33 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
       return;
     }
 
+    showCommonSnackbar(context, message: 'Please wait...', icon: Icons.error);
+
     try {
       // Create a new user account
-      await auth.createUserWithEmailAndPassword(
+      UserCredential userCredential = await auth.createUserWithEmailAndPassword(
           email: email, password: password);
+
+      // Generate a unique Game ID for the player (or use the Firebase user ID)
+      String gameId = userCredential.user!.uid;
+
+      // Create a new player model instance with default values
+      PlayerModel newPlayer = PlayerModel(
+        name: "Player", // Default name (can be updated later)
+        gameId: gameId,
+        email: email,
+        password: password, // This can be hashed for security reasons
+      );
+
+      // Save the player data to Firestore
+      await firestore.collection('players').doc(gameId).set(newPlayer.toMap());
 
       showCommonSnackbar(context,
           message: 'Account created successfully!', icon: Icons.check_circle);
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        _loadPlayerData(user.uid);
+      }
       setState(() {
         _showSignInForm = false;
         _showButtons = true;
@@ -480,6 +611,10 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
       // If sign-in is successful
       showCommonSnackbar(context,
           message: 'Logged in successfully!', icon: Icons.check_circle);
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        _loadPlayerData(user.uid);
+      }
       setState(() {
         _showSignInForm = false;
         _showButtons = true;

@@ -34,6 +34,26 @@ class Ball extends CircleComponent
       return;
     }
     position += velocity * dt;
+
+    // Prevent ball from going off-screen
+    if (position.x - radius <= 0) {
+      // Left side collision
+      position.x = radius;
+      velocity.x = -velocity.x;
+    } else if (position.x + radius >= game.width) {
+      // Right side collision
+      position.x = game.width - radius;
+      velocity.x = -velocity.x;
+    }
+
+    if (position.y - radius <= 0) {
+      // Top side collision
+      position.y = radius;
+      velocity.y = -velocity.y;
+    } else if (position.y + radius >= game.height) {
+      // Bottom side (game over)
+      // game.playState = PlayState.gameOver;
+    }
   }
 
   @override
@@ -52,7 +72,7 @@ class Ball extends CircleComponent
         add(RemoveEffect(
             delay: 0.35,
             onComplete: () {
-              game.playState = PlayState.gameOver;
+              // game.playState = PlayState.gameOver;
             }));
       }
     } else if (other is Bat) {

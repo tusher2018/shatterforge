@@ -17,6 +17,7 @@ class _MapCreatePageState extends State<MapCreatePage> {
   int defaultRow = 10;
   int defaultColumn = 10;
   int row = 10;
+  int like = 0, dislike = 0, hard = 0, easy = 0, medium = 0;
   int column = 10;
   Offset? selectedTile;
   int unBreakable = 0;
@@ -118,8 +119,14 @@ class _MapCreatePageState extends State<MapCreatePage> {
     }
     try {
       GridData gridData = GridData(
+          userId: FirebaseAuth.instance.currentUser!.uid,
           row: row,
           column: column,
+          dislike: dislike,
+          like: like,
+          hard: hard,
+          easy: easy,
+          medium: medium,
           tileAttributes: tileAttributes,
           isPlayable: true);
       await FirebaseFirestore.instance
@@ -159,6 +166,12 @@ class _MapCreatePageState extends State<MapCreatePage> {
         row = gridData.row;
         column = gridData.column;
         totalBricks = row * column;
+        easy = gridData.easy;
+        medium = gridData.medium;
+        hard = gridData.hard;
+        dislike = gridData.dislike;
+        like = gridData.like;
+
         tileAttributes = gridData.tileAttributes;
 
         setState(() {});

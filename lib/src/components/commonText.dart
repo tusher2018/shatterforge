@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 Widget commonText(String text,
     {Color color = Colors.white,
     bool isBold = false,
-    double size = 12,
+    double size = 14,
     overflow = TextOverflow.ellipsis}) {
   return Text(
     text,
     overflow: overflow,
-    style: TextStyle(
+    style: GoogleFonts.gemunuLibre(
         color: color,
         fontSize: size,
-        fontWeight: (isBold) ? FontWeight.bold : FontWeight.normal),
+        fontWeight: (isBold) ? FontWeight.w800 : FontWeight.normal),
   );
 }
 
