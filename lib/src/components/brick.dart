@@ -316,6 +316,11 @@ class Brick extends PositionComponent
   void onCollisionStart(
       Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
+
+    if (!tileData.brickType.isBreakable) {
+      return;
+    }
+
     if (other is Ball) {
       if (tileData.brickType.name == "Invisible" &&
           tileData.color == Colors.transparent) {
@@ -324,6 +329,7 @@ class Brick extends PositionComponent
 
       if (tileData.brickType.health <= 0) {
         removeFromParent();
+        game.brickBreak += 1;
       } else {
         tileData.brickType.health -= Config.balldamage;
       }

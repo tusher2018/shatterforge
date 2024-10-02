@@ -1,5 +1,6 @@
 // Updated HomeScreen with logo in the upper half
 import 'package:flutter/material.dart';
+import 'package:shatterforge/src/components/commonText.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -45,7 +46,7 @@ class HomeScreen extends StatelessWidget {
                               image: DecorationImage(
                                   image: AssetImage("assets/images/button.png"),
                                   fit: BoxFit.fill)),
-                          child: Text("Play"),
+                          child: commonText("Play", color: Colors.black),
                         )
                       ],
                     ),

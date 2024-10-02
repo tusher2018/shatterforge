@@ -1,14 +1,28 @@
+// ignore_for_file: must_be_immutable
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 import 'package:shatterforge/GridPainter.dart';
 
 import 'package:shatterforge/TileData.dart';
+import 'package:shatterforge/playerModel.dart';
+
 import 'package:shatterforge/src/components/commonText.dart';
+import 'package:shatterforge/src/config.dart';
+import 'package:shatterforge/src/widgets/game_app.dart';
 
 class MapCreatePage extends StatefulWidget {
+  PlayerModel playerData;
+  MapCreatePage({
+    super.key,
+    required this.playerData,
+  });
   @override
   _MapCreatePageState createState() => _MapCreatePageState();
 }
@@ -21,14 +35,19 @@ class _MapCreatePageState extends State<MapCreatePage> {
   int column = 10;
   Offset? selectedTile;
   int unBreakable = 0;
+  TextEditingController rowController = TextEditingController();
+  TextEditingController columnController = TextEditingController();
 
   String selectedShape = 'Rectangle';
   String selectedOrientation = 'Bottom-left';
   String selectedBasePosition = "Bottom";
   Color currentColor = Colors.blueAccent;
-  String selectedBrickType = brickTypes[0].name;
+  late String selectedBrickType;
 
   double selectedRotationAngle = 0;
+
+  late List<BrickType> brickTypes;
+
   Map<String, int> brickCounts = {
     'Standard': 0,
     'Unbreakable': 0,
@@ -49,6 +68,16 @@ class _MapCreatePageState extends State<MapCreatePage> {
   @override
   void initState() {
     super.initState();
+    brickTypes = [
+      BrickType('Standard', 40, widget.playerData.standardWallHealth, true),
+      BrickType('Unbreakable', 25, 100, false),
+      BrickType('Explosive', 5, widget.playerData.explosiveWallHealth, true),
+      BrickType('Speed', 5, widget.playerData.speedWallHealth, true),
+      BrickType('Invisible', 5, widget.playerData.invisibleWallHealth, true),
+      BrickType('Multi-Hit', 10, widget.playerData.multiHitWallHealth, true),
+      BrickType('Power-Up', 5, widget.playerData.powerUpWallHealth, true),
+    ];
+    selectedBrickType = brickTypes[0].name;
     _importGrid();
   }
 
@@ -108,7 +137,7 @@ class _MapCreatePageState extends State<MapCreatePage> {
     });
   }
 
-  void _exportGrid() async {
+  void _exportGrid({required bool isReady}) async {
     if (FirebaseAuth.instance.currentUser == null) {
       showCommonSnackbar(
         context,
@@ -117,36 +146,49 @@ class _MapCreatePageState extends State<MapCreatePage> {
       );
       return;
     }
-    try {
-      GridData gridData = GridData(
-          userId: FirebaseAuth.instance.currentUser!.uid,
-          row: row,
-          column: column,
-          dislike: dislike,
-          like: like,
-          hard: hard,
-          easy: easy,
-          medium: medium,
-          tileAttributes: tileAttributes,
-          isPlayable: true);
-      await FirebaseFirestore.instance
-          .collection('Maps')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
-          .set(gridData.toMap());
+    GridData gridData = GridData(
+        userId: FirebaseAuth.instance.currentUser!.uid,
+        row: row,
+        column: column,
+        dislike: dislike,
+        like: like,
+        hard: hard,
+        easy: easy,
+        medium: medium,
+        tileAttributes: tileAttributes,
+        isPlayable: isReady);
 
-      print('Tile attributes successfully saved to Firestore');
-      showCommonSnackbar(
-        context,
-        message: 'Map successfully Updated.',
-        icon: Icons.save,
-      );
-    } catch (e) {
-      print('Error saving tile attributes to Firestore: $e');
-      showCommonSnackbar(
-        context,
-        message: 'An error occoured map could not saved successfully.',
-        icon: Icons.error,
-      );
+    if (isReady) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (context) {
+          Config.initialize(context);
+          return GameApp(
+            gridData: gridData,
+            playerModel: null,
+          );
+        },
+      ));
+    } else {
+      try {
+        await FirebaseFirestore.instance
+            .collection('Maps')
+            .doc(FirebaseAuth.instance.currentUser!.uid)
+            .set(gridData.toMap());
+
+        print('Tile attributes successfully saved to Firestore');
+        showCommonSnackbar(
+          context,
+          message: 'Map successfully Updated.',
+          icon: Icons.save,
+        );
+      } catch (e) {
+        print('Error saving tile attributes to Firestore: $e');
+        showCommonSnackbar(
+          context,
+          message: 'An error occoured map could not saved successfully.',
+          icon: Icons.error,
+        );
+      }
     }
   }
 
@@ -219,318 +261,332 @@ class _MapCreatePageState extends State<MapCreatePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/background.jpg',
-            fit: BoxFit.cover,
-          ),
-          Column(
-            children: [
-              Expanded(
-                flex: 3,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return GestureDetector(
-                      onTapDown: (details) => onTapDown(details,
-                          Size(constraints.maxWidth, constraints.maxHeight)),
-                      child: CustomPaint(
-                        size: Size(constraints.maxWidth, constraints.maxHeight),
-                        painter: GridPainter(row, column, tileAttributes),
-                      ),
-                    );
-                  },
+      body: SafeArea(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/background.jpg',
+              fit: BoxFit.cover,
+            ),
+            Column(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return GestureDetector(
+                        onTapDown: (details) => onTapDown(details,
+                            Size(constraints.maxWidth, constraints.maxHeight)),
+                        child: CustomPaint(
+                          size:
+                              Size(constraints.maxWidth, constraints.maxHeight),
+                          painter: GridPainter(row, column, tileAttributes),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Container(
-                  color: Colors.black54,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 8),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  keyboardType: TextInputType.number,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: const InputDecoration(
-                                      labelText: 'Rows',
-                                      enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide: BorderSide(
-                                              color: Colors.white, width: 2)),
-                                      border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide: BorderSide(
-                                              color: Colors.white, width: 2)),
-                                      focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide: BorderSide(
-                                              color: Colors.white, width: 2)),
-                                      disabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide:
-                                              BorderSide(color: Colors.white, width: 2)),
-                                      labelStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      row = int.tryParse(value) ?? defaultRow;
-                                      totalBricks = row * column;
-                                    });
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: TextField(
-                                  keyboardType: TextInputType.number,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: const InputDecoration(
-                                      labelText: 'Columns',
-                                      enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide: BorderSide(
-                                              color: Colors.white, width: 2)),
-                                      border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide: BorderSide(
-                                              color: Colors.white, width: 2)),
-                                      focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide: BorderSide(
-                                              color: Colors.white, width: 2)),
-                                      disabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(5)),
-                                          borderSide:
-                                              BorderSide(color: Colors.white, width: 2)),
-                                      labelStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      column =
-                                          int.tryParse(value) ?? defaultColumn;
-                                      totalBricks = row * column;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (selectedTile != null)
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          commonText("Color", isBold: true),
-                                          GestureDetector(
-                                            onTap: () {
-                                              showDialog(
-                                                context: context,
-                                                builder:
-                                                    (BuildContext context) {
-                                                  return AlertDialog(
-                                                    title: commonText(
-                                                        'Pick a color'),
-                                                    content:
-                                                        SingleChildScrollView(
-                                                      child: ColorPicker(
-                                                        pickerColor:
-                                                            currentColor,
-                                                        onColorChanged:
-                                                            changeColor,
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    color: Colors.black54,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            if (selectedTile != null)
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            commonText("Color", isBold: true),
+                                            GestureDetector(
+                                              onTap: () {
+                                                showDialog(
+                                                  context: context,
+                                                  builder:
+                                                      (BuildContext context) {
+                                                    return AlertDialog(
+                                                      title: commonText(
+                                                          'Pick a color'),
+                                                      content:
+                                                          SingleChildScrollView(
+                                                        child: ColorPicker(
+                                                          pickerColor:
+                                                              currentColor,
+                                                          onColorChanged:
+                                                              changeColor,
+                                                        ),
                                                       ),
-                                                    ),
-                                                    actions: <Widget>[
-                                                      TextButton(
-                                                        child: commonText(
-                                                            'DONE',
-                                                            color:
-                                                                Colors.black),
-                                                        onPressed: () {
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                        },
-                                                      ),
-                                                    ],
-                                                  );
-                                                },
-                                              );
-                                            },
-                                            child: Container(
-                                              height: 24,
-                                              width: 24,
-                                              decoration: BoxDecoration(
-                                                color: currentColor,
-                                                border: Border.all(
-                                                    color: Colors.white,
-                                                    width: 1),
-                                                borderRadius:
-                                                    BorderRadius.circular(5),
+                                                      actions: <Widget>[
+                                                        TextButton(
+                                                          child: commonText(
+                                                              'DONE',
+                                                              color:
+                                                                  Colors.black),
+                                                          onPressed: () {
+                                                            Navigator.of(
+                                                                    context)
+                                                                .pop();
+                                                          },
+                                                        ),
+                                                      ],
+                                                    );
+                                                  },
+                                                );
+                                              },
+                                              child: Container(
+                                                height: 24,
+                                                width: 24,
+                                                decoration: BoxDecoration(
+                                                  color: currentColor,
+                                                  border: Border.all(
+                                                      color: Colors.white,
+                                                      width: 1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(5),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 10,
-                                    ),
-                                    Expanded(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                              color: Colors.white, width: 2),
-                                          color: currentColor.withOpacity(0.3),
-                                        ),
-                                        child: Center(
-                                          child: commonText(
-                                              "R${selectedTile!.dy.toInt()}, C${selectedTile!.dx.toInt()}",
-                                              size: 16),
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: commonText("Shape", isBold: true),
-                                    ),
-                                    Expanded(
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            child: DropdownButton<String>(
-                                              dropdownColor: Colors.black54,
-                                              value: selectedShape,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  selectedShape = value!;
-
-                                                  if (selectedTile != null) {
-                                                    tileAttributes[
-                                                            selectedTile!]!
-                                                        .shape = value;
-                                                  }
-                                                });
-                                              },
-                                              items: [
-                                                'Ellipse',
-                                                'Triangle',
-                                                'Right Triangle',
-                                                'Rectangle',
-                                                'Parallelogram',
-                                                'Trapezium',
-                                                'Pentagon',
-                                                'Hexagon',
-                                                'Kite',
-                                              ].map((shape) {
-                                                return DropdownMenuItem(
-                                                  value: shape,
-                                                  child: commonText(shape,
-                                                      isBold: true),
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ),
-                                        ],
+                                      const SizedBox(
+                                        width: 10,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                //break type
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: commonText("Brick type",
-                                          isBold: true),
-                                    ),
-                                    Expanded(
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          FittedBox(
-                                            child: DropdownButton<String>(
-                                              dropdownColor: Colors.black54,
-                                              value: selectedBrickType,
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  selectedBrickType = newValue!;
-
-                                                  if (selectedTile != null) {
-                                                    int index = brickTypes
-                                                        .indexWhere((type) =>
-                                                            type.name ==
-                                                            newValue);
-                                                    tileAttributes[
-                                                                selectedTile!]!
-                                                            .brickType =
-                                                        brickTypes[index];
-                                                    if (newValue ==
-                                                        "Invisible") {
-                                                      tileAttributes[
-                                                                  selectedTile!]!
-                                                              .color =
-                                                          Colors.transparent;
-                                                    }
-                                                  }
-                                                });
-                                              },
-                                              items: brickTypes
-                                                  .map((BrickType brickType) {
-                                                return DropdownMenuItem<String>(
-                                                  value: brickType.name,
-                                                  child: commonText(
-                                                      brickType.name),
-                                                );
-                                              }).toList(),
-                                            ),
+                                      Expanded(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                                color: Colors.white, width: 2),
+                                            color:
+                                                currentColor.withOpacity(0.3),
                                           ),
-                                        ],
+                                          child: Center(
+                                            child: commonText(
+                                                "R${selectedTile!.dy.toInt()}, C${selectedTile!.dx.toInt()}",
+                                                size: 16),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-
-                                //break type end
-
-                                Visibility(
-                                  visible: selectedShape == "Right Triangle",
-                                  child: Row(
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
-                                        child: commonText(
-                                            "Triangle Orientation",
+                                        child:
+                                            commonText("Shape", isBold: true),
+                                      ),
+                                      Expanded(
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
+                                          children: [
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: DropdownButton<String>(
+                                                dropdownColor: Colors.black54,
+                                                value: selectedShape,
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    selectedShape = value!;
+
+                                                    if (selectedTile != null) {
+                                                      tileAttributes[
+                                                              selectedTile!]!
+                                                          .shape = value;
+                                                    }
+                                                  });
+                                                },
+                                                items: [
+                                                  'Ellipse',
+                                                  'Triangle',
+                                                  'Right Triangle',
+                                                  'Rectangle',
+                                                  'Parallelogram',
+                                                  'Trapezium',
+                                                  'Pentagon',
+                                                  'Hexagon',
+                                                  'Kite',
+                                                ].map((shape) {
+                                                  return DropdownMenuItem(
+                                                    value: shape,
+                                                    child: commonText(shape,
+                                                        isBold: true),
+                                                  );
+                                                }).toList(),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  //break type end
+
+                                  Visibility(
+                                    visible: selectedShape == "Right Triangle",
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: commonText(
+                                              "Triangle Orientation",
+                                              isBold: true),
+                                        ),
+                                        Expanded(
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: DropdownButton<String>(
+                                                  value: selectedOrientation,
+                                                  dropdownColor: Colors.black54,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      selectedOrientation =
+                                                          value!;
+                                                      if (selectedTile !=
+                                                          null) {
+                                                        tileAttributes[
+                                                                selectedTile!]!
+                                                            .orientation = value;
+                                                      }
+                                                    });
+                                                  },
+                                                  items: [
+                                                    'Bottom-left',
+                                                    'Top-left',
+                                                    'Bottom-right',
+                                                    'Top-right',
+                                                  ].map((orientation) {
+                                                    return DropdownMenuItem(
+                                                      value: orientation,
+                                                      child: commonText(
+                                                          orientation,
+                                                          isBold: true),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Visibility(
+                                    visible: selectedShape == "Triangle" ||
+                                        selectedShape == "Trapezium" ||
+                                        selectedShape == "Parallelogram",
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: commonText(
+                                            "Base Position",
+                                            isBold: true,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: DropdownButton<String>(
+                                                  value: selectedBasePosition,
+                                                  dropdownColor: Colors.black54,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      selectedBasePosition =
+                                                          value!;
+                                                      if (selectedTile !=
+                                                          null) {
+                                                        tileAttributes[
+                                                                selectedTile!]!
+                                                            .basePosition = value;
+                                                      }
+                                                    });
+                                                  },
+                                                  items: [
+                                                    'Bottom',
+                                                    'Top',
+                                                    'Left',
+                                                    'Right',
+                                                  ].map((basePosition) {
+                                                    return DropdownMenuItem(
+                                                      value: basePosition,
+                                                      child: commonText(
+                                                          basePosition,
+                                                          isBold: true),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Visibility(
+                                    visible: selectedShape == "Pentagon" ||
+                                        selectedShape == "Hexagon",
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: commonText(
+                                            "Polygon Rotation Angle",
+                                            isBold: true,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Slider(
+                                            value: selectedRotationAngle,
+                                            min: 0,
+                                            max: 3.141592653589793 * 2,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                selectedRotationAngle = value;
+                                                if (selectedTile != null) {
+                                                  tileAttributes[selectedTile!]!
+                                                      .rotationAngle = value;
+                                                }
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  //break type
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: commonText("Brick type",
                                             isBold: true),
                                       ),
                                       Expanded(
@@ -539,32 +595,40 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                               MainAxisAlignment.end,
                                           children: [
                                             FittedBox(
-                                              fit: BoxFit.scaleDown,
                                               child: DropdownButton<String>(
-                                                value: selectedOrientation,
                                                 dropdownColor: Colors.black54,
-                                                onChanged: (value) {
+                                                value: selectedBrickType,
+                                                onChanged: (String? newValue) {
                                                   setState(() {
-                                                    selectedOrientation =
-                                                        value!;
+                                                    selectedBrickType =
+                                                        newValue!;
+
                                                     if (selectedTile != null) {
+                                                      int index = brickTypes
+                                                          .indexWhere((type) =>
+                                                              type.name ==
+                                                              newValue);
                                                       tileAttributes[
-                                                              selectedTile!]!
-                                                          .orientation = value;
+                                                                  selectedTile!]!
+                                                              .brickType =
+                                                          brickTypes[index];
+                                                      if (newValue ==
+                                                          "Invisible") {
+                                                        tileAttributes[
+                                                                    selectedTile!]!
+                                                                .color =
+                                                            Colors.transparent;
+                                                      }
                                                     }
                                                   });
                                                 },
-                                                items: [
-                                                  'Bottom-left',
-                                                  'Top-left',
-                                                  'Bottom-right',
-                                                  'Top-right',
-                                                ].map((orientation) {
-                                                  return DropdownMenuItem(
-                                                    value: orientation,
+                                                items: brickTypes
+                                                    .map((BrickType brickType) {
+                                                  return DropdownMenuItem<
+                                                      String>(
+                                                    value: brickType.name,
                                                     child: commonText(
-                                                        orientation,
-                                                        isBold: true),
+                                                        brickType.name),
                                                   );
                                                 }).toList(),
                                               ),
@@ -574,107 +638,148 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                       ),
                                     ],
                                   ),
-                                ),
-                                Visibility(
-                                  visible: selectedShape == "Triangle" ||
-                                      selectedShape == "Trapezium" ||
-                                      selectedShape == "Parallelogram",
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: commonText(
-                                          "Base Position",
-                                          isBold: true,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
-                                          children: [
-                                            FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              child: DropdownButton<String>(
-                                                value: selectedBasePosition,
-                                                dropdownColor: Colors.black54,
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    selectedBasePosition =
-                                                        value!;
-                                                    if (selectedTile != null) {
-                                                      tileAttributes[
-                                                              selectedTile!]!
-                                                          .basePosition = value;
-                                                    }
-                                                  });
-                                                },
-                                                items: [
-                                                  'Bottom',
-                                                  'Top',
-                                                  'Left',
-                                                  'Right',
-                                                ].map((basePosition) {
-                                                  return DropdownMenuItem(
-                                                    value: basePosition,
-                                                    child: commonText(
-                                                        basePosition,
-                                                        isBold: true),
-                                                  );
-                                                }).toList(),
-                                              ),
+
+                                  Center(
+                                    child: InkWell(
+                                      onTap: () {
+                                        if (selectedTile != null) {
+                                          tileAttributes.remove(selectedTile);
+                                          selectedTile = null;
+                                          setState(() {});
+                                          print(tileAttributes[selectedTile]);
+                                        }
+                                      },
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          commonText("Delete the brick",
+                                              isBold: true),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                                color: primaryColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(5)),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 8,
                                             ),
-                                          ],
-                                        ),
+                                            child: commonText("Delete",
+                                                color: Colors.black),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: rowController,
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: const InputDecoration(
+                                        labelText: 'Rows',
+                                        enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(
+                                                color: Colors.white, width: 2)),
+                                        border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(
+                                                color: Colors.white, width: 2)),
+                                        focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(
+                                                color: Colors.white, width: 2)),
+                                        disabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(color: Colors.white, width: 2)),
+                                        labelStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        row = int.tryParse(value) ?? defaultRow;
+                                        if (row > 100) {
+                                          row = 100;
+                                          rowController.text = 100.toString();
+                                        }
+                                        totalBricks = row * column;
+                                      });
+                                    },
                                   ),
                                 ),
-                                Visibility(
-                                  visible: selectedShape == "Pentagon" ||
-                                      selectedShape == "Hexagon",
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: commonText(
-                                          "Polygon Rotation Angle",
-                                          isBold: true,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Slider(
-                                          value: selectedRotationAngle,
-                                          min: 0,
-                                          max: 3.141592653589793 * 2,
-                                          onChanged: (value) {
-                                            setState(() {
-                                              selectedRotationAngle = value;
-                                              if (selectedTile != null) {
-                                                tileAttributes[selectedTile!]!
-                                                    .rotationAngle = value;
-                                              }
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    ],
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: TextField(
+                                    keyboardType: TextInputType.number,
+                                    controller: columnController,
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: const InputDecoration(
+                                        labelText: 'Columns',
+                                        enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(
+                                                color: Colors.white, width: 2)),
+                                        border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(
+                                                color: Colors.white, width: 2)),
+                                        focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(
+                                                color: Colors.white, width: 2)),
+                                        disabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(5)),
+                                            borderSide: BorderSide(color: Colors.white, width: 2)),
+                                        labelStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        column = int.tryParse(value) ??
+                                            defaultColumn;
+                                        if (column > 100) {
+                                          column = 100;
+                                          columnController.text =
+                                              100.toString();
+                                        }
+                                        totalBricks = row * column;
+                                      });
+                                    },
                                   ),
                                 ),
                               ],
                             ),
-                          commonButton(context, "Save", _exportGrid),
-                        ],
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                commonButton(context, "Save", () {
+                                  _exportGrid(isReady: true);
+                                }),
+                                commonButton(context, "Draft", () {
+                                  _exportGrid(isReady: false);
+                                }),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

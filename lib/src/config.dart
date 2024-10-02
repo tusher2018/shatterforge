@@ -4,6 +4,7 @@ const difficultyModifier = 1.02;
 
 const primaryColor = Color(0xFFEFEF5CE);
 final int maxHealth = 10;
+int maxLevel = 13; // Maximum level the player can reach
 
 class Config {
   static late double ballRadius;

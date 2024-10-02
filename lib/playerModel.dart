@@ -9,7 +9,7 @@ class PlayerModel {
   int matchesPlayed; // Total matches played by the player
   int matchTotalWin;
   int matchTotalLose;
-  int hardMatchesPlayed; // Total hard matches played
+  int coins; // Total hard matches played
   int baseLiked; // Number of likes for the player's base
   int baseDisliked; // Number of dislikes for the player's base
   int level; // Player's level
@@ -38,7 +38,7 @@ class PlayerModel {
       this.matchesPlayed = 0,
       this.matchTotalWin = 0,
       this.matchTotalLose = 0,
-      this.hardMatchesPlayed = 0,
+      this.coins = 0,
       this.baseLiked = 0,
       this.baseDisliked = 0,
       this.level = 1,
@@ -76,7 +76,7 @@ class PlayerModel {
       'matchesPlayed': matchesPlayed,
       'matchTotalWin': matchTotalWin,
       'matchTotalLose': matchTotalLose,
-      'hardMatchesPlayed': hardMatchesPlayed,
+      'coin': coins,
       'baseLiked': baseLiked,
       'baseDisliked': baseDisliked,
       'level': level,
@@ -105,7 +105,7 @@ class PlayerModel {
       matchesPlayed: map['matchesPlayed'] ?? 0,
       matchTotalWin: map['matchTotalWin'] ?? 0,
       matchTotalLose: map['matchTotalLose'] ?? 0,
-      hardMatchesPlayed: map['hardMatchesPlayed'] ?? 0,
+      coins: map['coin'] ?? 0,
       baseLiked: map['baseLiked'] ?? 0,
       baseDisliked: map['baseDisliked'] ?? 0,
       level: map['level'] ?? 1,

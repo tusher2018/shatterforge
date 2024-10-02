@@ -50,19 +50,8 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
     'Ball Damage': 0,
   };
 
-  // Map<String, bool> hasUpgradedThisLevel = {
-  //   'Standard Wall': false,
-  //   'Explosive Wall': false,
-  //   'Speed Up Wall': false,
-  //   'Invisible Wall': false,
-  //   'Multi-Hit Wall': false,
-  //   'Power-Up Wall': false,
-  //   'Unbreakable Wall': false,
-  //   'Ball Damage': false,
-  // };
-
   Map<String, int> upgradeCost = {
-    'Standard Wall': 100,
+    'Standard Wall': 20,
     'Explosive Wall': 150,
     'Speed Up Wall': 120,
     'Invisible Wall': 200,
@@ -83,12 +72,13 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
     'Ball Damage': const Duration(seconds: 3),
   };
 
-  int maxLevel = 13; // Maximum level the player can reach
-
   @override
   void initState() {
     super.initState();
     // Initialize any necessary data here
+    if (_allItemsUpgradedThisLevel()) {
+      _levelUp();
+    }
   }
 
   bool _allItemsUpgradedThisLevel() {
@@ -132,6 +122,16 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
     if (widget.playerModel.hasUpgradedThisLevel[itemName] == true) {
       return;
     }
+
+    if (widget.playerModel.coins < upgradeCost[itemName]!) {
+      showCommonSnackbar(
+        context,
+        message: 'Insufficient gold',
+        icon: Icons.error,
+      );
+      return;
+    }
+    widget.playerModel.coins -= upgradeCost[itemName]!;
 
     final upgradeDuration = upgradeTimes[itemName]!;
 
@@ -215,13 +215,14 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
 
       _updatePlayerData({
         'hasUpgradedThisLevel': widget.playerModel.hasUpgradedThisLevel,
+        'coin': widget.playerModel.coins
       });
     });
 
     // Optionally, level up if all items are upgraded
-    // if (_allItemsUpgradedThisLevel()) {
-    //   _levelUp();
-    // }
+    if (_allItemsUpgradedThisLevel()) {
+      _levelUp();
+    }
   }
 
   Widget _buildUpgradeCard({
@@ -282,11 +283,9 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
                     const SizedBox(
                       height: 4,
                     ),
-                    Text(
+                    commonText(
                       "Level: $levelDisplay",
-                      style: const TextStyle(
-                        color: Colors.white,
-                      ),
+                      color: Colors.white,
                     ),
                   ],
                 ),
@@ -297,60 +296,72 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
+                          commonText(
                             itemName,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                            size: 14,
+                            isBold: true,
+                            color: Colors.white,
                           ),
-                          Text(
-                            isBall
-                                ? "Damage: $currentValue"
-                                : isUnbreakable
-                                    ? 'Walls: $currentValue%'
-                                    : 'Health: $currentValue',
-                            style: const TextStyle(
-                                fontSize: 14, color: Colors.white),
-                          ),
+                          commonText(
+                              isBall
+                                  ? "Damage: $currentValue"
+                                  : isUnbreakable
+                                      ? 'Walls: $currentValue%'
+                                      : 'Health: $currentValue',
+                              size: 14,
+                              color: Colors.white),
                         ],
                       ),
                       const SizedBox(height: 8),
                       LinearProgressIndicator(
                         value: currentValue / 200,
-                        backgroundColor: Colors.grey[300],
+                        backgroundColor: primaryColor,
                         color: Colors.blueAccent,
                       ),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Cost: $cost Gold',
-                            style: const TextStyle(
-                                fontSize: 16, color: Colors.yellow),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: commonText('Cost: $cost Gold',
+                                      size: 12, color: Colors.yellow),
+                                ),
+                              ],
+                            ),
                           ),
-                          ElevatedButton(
-                            onPressed: widget
-                                    .playerModel.hasUpgradedThisLevel[itemName]!
-                                ? null
-                                : onUpgrade,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 16.0),
+                                child: ElevatedButton(
+                                  onPressed: widget.playerModel
+                                          .hasUpgradedThisLevel[itemName]!
+                                      ? null
+                                      : onUpgrade,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: commonText(
+                                    widget.playerModel
+                                            .hasUpgradedThisLevel[itemName]!
+                                        ? "Already Upgraded"
+                                        : isUpgrading[itemName]!
+                                            ? "Upgrading... (${remainingTime[itemName]!.inSeconds}s left)"
+                                            : "Upgrade (${upgradeTimes[itemName]!.inSeconds}s)",
+                                    color: Colors.black,
+                                  ),
+                                ),
                               ),
                             ),
-                            child: commonText(
-                              widget.playerModel.hasUpgradedThisLevel[itemName]!
-                                  ? "Already Upgraded"
-                                  : isUpgrading[itemName]!
-                                      ? "Upgrading... (${remainingTime[itemName]!.inSeconds}s left)"
-                                      : "Upgrade (${upgradeTimes[itemName]!.inSeconds}s)",
-                              color: Colors.black,
-                            ),
-                          ),
+                          )
                         ],
                       ),
                     ],
@@ -376,6 +387,12 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
         centerTitle: true,
         title:
             commonText('Upgrade', color: Colors.black, size: 20, isBold: true),
+        actions: [
+          commonText("Gold : ${widget.playerModel.coins}", color: Colors.black),
+          SizedBox(
+            width: 16,
+          )
+        ],
       ),
       body: Stack(
         fit: StackFit.expand,

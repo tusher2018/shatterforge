@@ -142,8 +142,7 @@ class _PlayerProfilePageState extends State<PlayerProfilePage> {
                         "Total Wins", widget.profile.matchTotalWin.toString()),
                     buildProfileItem("Total Losses",
                         widget.profile.matchTotalLose.toString()),
-                    buildProfileItem("Hard Matches Played",
-                        widget.profile.hardMatchesPlayed.toString()),
+                    buildProfileItem("Coins", widget.profile.coins.toString()),
                     buildProfileItem(
                         "Base Liked", widget.profile.baseLiked.toString()),
                     buildProfileItem("Base Disliked",

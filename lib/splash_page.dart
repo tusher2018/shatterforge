@@ -261,7 +261,9 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => AllMatch(),
+                                  builder: (context) => AllMatch(
+                                    playerModel: _playerData,
+                                  ),
                                 ),
                               );
                             },
@@ -276,16 +278,23 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
                                   delay: 300,
                                   exitButton: _exitButtons),
                               iconsBuild("assets/images/map.png", "Map", () {
+                                if (_playerData == null) {
+                                  showCommonSnackbar(
+                                    context,
+                                    message: 'Make sure you joined!',
+                                    icon: Icons.error,
+                                  );
+                                  return;
+                                }
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => MapCreatePage(),
+                                    builder: (context) => MapCreatePage(
+                                      playerData: _playerData!,
+                                    ),
                                   ),
                                 );
-                              },
-                                  color: Colors.black,
-                                  delay: 600,
-                                  exitButton: _exitButtons),
+                              }, delay: 600, exitButton: _exitButtons),
                               iconsBuild(
                                   "assets/images/rank.png",
                                   "LeaderShip",

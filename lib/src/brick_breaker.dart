@@ -34,9 +34,11 @@ class BrickBreaker extends FlameGame
   late Ball ball;
   late Bat bat;
   int playerHealth = 1;
+  int brickBreak = 0;
 
   BrickBreaker({
     required this.gridData,
+    this.playerHealth = 3,
   }) : super();
 
   final rand = math.Random();
@@ -145,18 +147,16 @@ class BrickBreaker extends FlameGame
     world.addAll([
       for (var i = 0; i < gridData.row; i++)
         for (var j = 0; j < gridData.column; j++)
-          Brick(
-            position: Vector2((size.x / gridData.column) * i,
-                ((size.y * 0.5) / gridData.row) * j),
-            tileData:
-                gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())] ??
-                    TileModel(
-                        position: const Offset(0, 0),
-                        color: Colors.transparent,
-                        brickType: brickTypes[4]),
-            size: Vector2(
-                size.x / gridData.column, (size.y * 0.5) / gridData.row),
-          ),
+          if (gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())] !=
+              null)
+            Brick(
+              position: Vector2((size.x / gridData.column) * i,
+                  ((size.y * 0.5) / gridData.row) * j),
+              tileData:
+                  gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())]!,
+              size: Vector2(
+                  size.x / gridData.column, (size.y * 0.5) / gridData.row),
+            ),
     ]);
   }
 

@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shatterforge/TileData.dart';
+import 'package:shatterforge/playerModel.dart';
 import 'package:shatterforge/src/brick_breaker.dart';
+import 'package:shatterforge/src/components/commonText.dart';
 
 import 'package:shatterforge/src/config.dart';
 import 'package:shatterforge/src/widgets/overlay_screen.dart';
@@ -13,11 +16,14 @@ import 'package:shatterforge/src/widgets/overlay_screen.dart';
 enum DifficultyLevel { easy, medium, hard }
 
 class GameApp extends StatefulWidget {
-  const GameApp({
-    super.key,
-    required this.gridData,
-  });
+  const GameApp(
+      {super.key,
+      required this.gridData,
+      required this.playerModel,
+      this.playerTest = false});
   final GridData gridData;
+  final PlayerModel? playerModel;
+  final bool playerTest;
 
   @override
   State<GameApp> createState() => _GameAppState();
@@ -32,7 +38,47 @@ class _GameAppState extends State<GameApp> {
   @override
   void initState() {
     super.initState();
-    game = BrickBreaker(gridData: widget.gridData);
+    int health = 3;
+    if (widget.playerModel != null) {
+      switch (widget.playerModel!.level) {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+          health = 3;
+          break;
+        case 7:
+          health = 4;
+          break;
+        case 8:
+          health = 5;
+          break;
+        case 9:
+          health = 6;
+          break;
+        case 10:
+          health = 7;
+          break;
+        case 11:
+          health = 8;
+          break;
+        case 12:
+          health = 9;
+          break;
+        case 13:
+          health = 10;
+          break;
+        default:
+          health = 10;
+          break;
+      }
+    }
+    if (widget.playerTest) {
+      health = 10;
+    }
+    game = BrickBreaker(gridData: widget.gridData, playerHealth: health);
     if (widget.gridData.dislike > widget.gridData.like) {
       isLiked = false;
     } else {
@@ -71,9 +117,9 @@ class _GameAppState extends State<GameApp> {
                 game: game,
                 overlayBuilderMap: {
                   PlayState.gameOver.name: (context, game) =>
-                      EndScreen("GAME OVER"),
+                      EndScreen("GAME OVER", false),
                   PlayState.won.name: (context, game) =>
-                      EndScreen("Y O U   W O N ! ! !"),
+                      EndScreen("Y O U   W O N ! ! !", true),
 
                   /////////
                   PlayState.round1.name: (context, game) => const OverlayScreen(
@@ -130,7 +176,7 @@ class _GameAppState extends State<GameApp> {
     );
   }
 
-  Widget EndScreen(String text) {
+  Widget EndScreen(String text, bool win) {
     return Container(
       color: Colors.black54,
       alignment: const Alignment(0, 0.3),
@@ -143,17 +189,19 @@ class _GameAppState extends State<GameApp> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    text,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 40,
-                        color:
-                            primaryColor // Change text color for selected state
-                        ),
-                  ).animate().slideY(duration: 750.ms, begin: -3, end: 0),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 40,
+                          color:
+                              primaryColor // Change text color for selected state
+                          ),
+                    ).animate().slideY(duration: 750.ms, begin: -3, end: 0),
+                  ),
                 ),
               ],
             ),
@@ -245,38 +293,99 @@ class _GameAppState extends State<GameApp> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: GestureDetector(
-                    onTap: () async {
-                      if (isLiked) {
-                        widget.gridData.like += 1;
-                      } else {
-                        widget.gridData.dislike += 1;
-                      }
-                      if (selectedDifficulty == DifficultyLevel.easy) {
-                        widget.gridData.easy += 1;
-                      } else if (selectedDifficulty == DifficultyLevel.medium) {
-                        widget.gridData.medium += 1;
-                      } else if (selectedDifficulty == DifficultyLevel.hard) {
-                        widget.gridData.hard += 1;
-                      }
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: GestureDetector(
+                      onTap: () async {
+                        if (isLiked) {
+                          widget.gridData.like += 1;
+                        } else {
+                          widget.gridData.dislike += 1;
+                        }
+                        if (selectedDifficulty == DifficultyLevel.easy) {
+                          widget.gridData.easy += 1;
+                        } else if (selectedDifficulty ==
+                            DifficultyLevel.medium) {
+                          widget.gridData.medium += 1;
+                        } else if (selectedDifficulty == DifficultyLevel.hard) {
+                          widget.gridData.hard += 1;
+                        }
+                        if (widget.playerModel != null &&
+                            FirebaseAuth.instance.currentUser != null) {
+                          if (win) {
+                            widget.playerModel!.matchTotalWin += 1;
+                          } else {
+                            widget.playerModel!.matchTotalLose += 1;
+                          }
+                          widget.playerModel!.totalBricksDestroyed +=
+                              game.brickBreak;
+                          widget.playerModel!.matchesPlayed += 1;
+                          widget.playerModel!.coins += 10;
 
-                      await FirebaseFirestore.instance
-                          .collection('Maps')
-                          .doc(widget.gridData.userId)
-                          .update(widget.gridData.toMap())
-                          .then((value) => Navigator.pop(context));
-                    },
-                    child: const Text(
-                      "Go to Home",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 40,
-                          color:
-                              primaryColor // Change text color for selected state
-                          ),
-                    ).animate().slideY(duration: 750.ms, begin: 3, end: 0),
+                          if (!widget.playerTest) {
+                            //own player progress
+                            FirebaseFirestore.instance
+                                .collection('players')
+                                .doc(FirebaseAuth.instance.currentUser!.uid)
+                                .update({
+                              'coin': widget.playerModel!.coins,
+                              'matchesPlayed':
+                                  widget.playerModel!.matchesPlayed,
+                              'totalBricksDestroyed':
+                                  widget.playerModel!.totalBricksDestroyed,
+                              'matchTotalWin':
+                                  widget.playerModel!.matchTotalWin,
+                              'matchTotalLose':
+                                  widget.playerModel!.matchTotalLose,
+                            });
+
+                            //bitted player progress
+                            FirebaseFirestore.instance
+                                .collection('Maps')
+                                .doc(widget.gridData.userId)
+                                .update(widget.gridData.toMap());
+                            FirebaseFirestore.instance
+                                .collection('players')
+                                .doc(widget.gridData.userId)
+                                .update({
+                              "baseLiked": widget.gridData.like,
+                              "baseDisliked": widget.gridData.dislike,
+                            });
+                          } else {
+                            try {
+                              widget.gridData.isPlayable = true;
+                              await FirebaseFirestore.instance
+                                  .collection('Maps')
+                                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                                  .set(widget.gridData.toMap());
+                              showCommonSnackbar(
+                                context,
+                                message: 'Map successfully Updated.',
+                                icon: Icons.save,
+                              );
+                            } catch (e) {
+                              showCommonSnackbar(
+                                context,
+                                message:
+                                    'An error occoured map could not saved successfully.',
+                                icon: Icons.error,
+                              );
+                            }
+                          }
+                        }
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        "Go to Home",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 40,
+                            color:
+                                primaryColor // Change text color for selected state
+                            ),
+                      ).animate().slideY(duration: 750.ms, begin: 3, end: 0),
+                    ),
                   ),
                 ),
               ],

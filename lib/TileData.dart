@@ -1,29 +1,17 @@
 import 'package:flutter/material.dart';
 
-List<BrickType> brickTypes = [
-  BrickType('Standard', 40, 100),
-  BrickType('Unbreakable', 25, 200),
-  BrickType('Explosive', 5, 100),
-  BrickType('Speed', 5, 100),
-  BrickType('Invisible', 5, 100),
-  BrickType('Multi-Hit', 10, 100),
-  BrickType('Power-Up', 5, 100),
-];
-
 class BrickType {
   final String name;
   int health;
+  bool isBreakable;
   final int maxPercentage;
 
-  BrickType(this.name, this.maxPercentage, this.health);
+  BrickType(this.name, this.maxPercentage, this.health, this.isBreakable);
 
   // Convert a Map to BrickType (fromMap)
   factory BrickType.fromMap(Map<String, dynamic> map) {
-    return BrickType(
-      map['name'] as String,
-      map['maxPercentage'] as int,
-      map['health'] as int,
-    );
+    return BrickType(map['name'] as String, map['maxPercentage'] as int,
+        map['health'] as int, map['isBreakable'] ?? true);
   }
 
   // Convert a BrickType to Map (toMap)
@@ -32,6 +20,7 @@ class BrickType {
       'name': name,
       'maxPercentage': maxPercentage,
       'health': health,
+      'isBreakable': isBreakable
     };
   }
 }
@@ -93,7 +82,7 @@ class TileModel {
   factory TileModel.fromMap(Map<String, dynamic> map) {
     late BrickType localBrickType;
     if (map['brickType'] == null) {
-      localBrickType = BrickType('Standard', 40, 100);
+      localBrickType = BrickType('Standard', 40, 100, true);
     } else {
       localBrickType = BrickType.fromMap(map['brickType']);
     }

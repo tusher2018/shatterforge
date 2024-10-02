@@ -1,12 +1,16 @@
+// ignore_for_file: must_be_immutable
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shatterforge/TileData.dart';
+import 'package:shatterforge/playerModel.dart';
 import 'package:shatterforge/src/components/commonText.dart';
 import 'package:shatterforge/src/config.dart';
 import 'package:shatterforge/src/widgets/game_app.dart';
 
 class AllMatch extends StatefulWidget {
-  @override
+  PlayerModel? playerModel;
+  AllMatch({super.key, this.playerModel});
   _AllMatchState createState() => _AllMatchState();
 }
 
@@ -17,7 +21,7 @@ class _AllMatchState extends State<AllMatch>
 
   // Categories for tabs
   final List<String> categories = [
-    'All Base',
+    'All',
     'Liked',
     'Disliked',
     'Easy',
@@ -79,7 +83,7 @@ class _AllMatchState extends State<AllMatch>
         filteredMaps.sort(
             (a, b) => b.hard.compareTo(a.hard)); // Sort by hard descending
         break;
-      case 'All Base':
+      case 'All':
       default:
         filteredMaps = mapsList; // Show all for the bricks category
         break;
@@ -114,8 +118,13 @@ class _AllMatchState extends State<AllMatch>
                 unselectedLabelColor: Colors.white,
                 indicatorColor: primaryColor,
                 dividerColor: Colors.white,
-                tabs:
-                    categories.map((category) => Tab(text: category)).toList(),
+                tabs: categories
+                    .map((category) => Tab(
+                          child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: commonText(category, size: 11)),
+                        ))
+                    .toList(),
               ),
               Expanded(
                 child: FutureBuilder<List<GridData>>(
@@ -152,7 +161,10 @@ class _AllMatchState extends State<AllMatch>
                                 Navigator.push(context, MaterialPageRoute(
                                   builder: (context) {
                                     Config.initialize(context);
-                                    return GameApp(gridData: gridData);
+                                    return GameApp(
+                                      gridData: gridData,
+                                      playerModel: widget.playerModel,
+                                    );
                                   },
                                 ));
                               },
