@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shatterforge/all_match.dart';
+import 'package:shatterforge/leaderboard.dart';
 import 'package:shatterforge/map_create.dart';
 import 'package:shatterforge/playerModel.dart';
 import 'package:shatterforge/player_update.dart';
@@ -296,11 +297,21 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
                                 );
                               }, delay: 600, exitButton: _exitButtons),
                               iconsBuild(
-                                  "assets/images/rank.png",
-                                  "LeaderShip",
-                                  delay: 900,
-                                  exitButton: _exitButtons,
-                                  () {}),
+                                "assets/images/rank.png",
+                                "LeaderShip",
+                                delay: 900,
+                                exitButton: _exitButtons,
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => Leaderboard(
+                                        playerModel: _playerData,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             ],
                           ),
                           Row(

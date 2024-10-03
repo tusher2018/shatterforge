@@ -1,3 +1,5 @@
+// ignore_for_file: must_be_immutable, use_build_context_synchronously, non_constant_identifier_names
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -16,14 +18,14 @@ import 'package:shatterforge/src/widgets/overlay_screen.dart';
 enum DifficultyLevel { easy, medium, hard }
 
 class GameApp extends StatefulWidget {
-  const GameApp(
+  GameApp(
       {super.key,
       required this.gridData,
       required this.playerModel,
       this.playerTest = false});
-  final GridData gridData;
-  final PlayerModel? playerModel;
-  final bool playerTest;
+  GridData gridData;
+  PlayerModel? playerModel;
+  bool playerTest;
 
   @override
   State<GameApp> createState() => _GameAppState();
@@ -102,8 +104,8 @@ class _GameAppState extends State<GameApp> {
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.pressStart2pTextTheme().apply(
-          bodyColor: Color.fromARGB(255, 0, 0, 0),
-          displayColor: Color.fromARGB(255, 0, 0, 0),
+          bodyColor: const Color.fromARGB(255, 0, 0, 0),
+          displayColor: const Color.fromARGB(255, 0, 0, 0),
         ),
       ),
       home: Scaffold(
@@ -312,7 +314,9 @@ class _GameAppState extends State<GameApp> {
                           widget.gridData.hard += 1;
                         }
                         if (widget.playerModel != null &&
-                            FirebaseAuth.instance.currentUser != null) {
+                            FirebaseAuth.instance.currentUser != null &&
+                            FirebaseAuth.instance.currentUser!.uid !=
+                                widget.gridData.userId) {
                           if (win) {
                             widget.playerModel!.matchTotalWin += 1;
                           } else {
@@ -323,56 +327,57 @@ class _GameAppState extends State<GameApp> {
                           widget.playerModel!.matchesPlayed += 1;
                           widget.playerModel!.coins += 10;
 
-                          if (!widget.playerTest) {
-                            //own player progress
-                            FirebaseFirestore.instance
-                                .collection('players')
+                          //own player progress
+                          FirebaseFirestore.instance
+                              .collection('players')
+                              .doc(FirebaseAuth.instance.currentUser!.uid)
+                              .update({
+                            'coin': widget.playerModel!.coins,
+                            'matchesPlayed': widget.playerModel!.matchesPlayed,
+                            'totalBricksDestroyed':
+                                widget.playerModel!.totalBricksDestroyed,
+                            'matchTotalWin': widget.playerModel!.matchTotalWin,
+                            'matchTotalLose':
+                                widget.playerModel!.matchTotalLose,
+                          });
+
+                          //bitted player progress
+                          FirebaseFirestore.instance
+                              .collection('Maps')
+                              .doc(widget.gridData.userId)
+                              .update(widget.gridData.toMap());
+                          FirebaseFirestore.instance
+                              .collection('players')
+                              .doc(widget.gridData.userId)
+                              .update({
+                            "baseLiked": widget.gridData.like,
+                            "baseDisliked": widget.gridData.dislike,
+                          });
+                        }
+                        if (win && widget.playerTest) {
+                          try {
+                            widget.gridData.isPlayable = true;
+                            await FirebaseFirestore.instance
+                                .collection('Maps')
                                 .doc(FirebaseAuth.instance.currentUser!.uid)
                                 .update({
-                              'coin': widget.playerModel!.coins,
-                              'matchesPlayed':
-                                  widget.playerModel!.matchesPlayed,
-                              'totalBricksDestroyed':
-                                  widget.playerModel!.totalBricksDestroyed,
-                              'matchTotalWin':
-                                  widget.playerModel!.matchTotalWin,
-                              'matchTotalLose':
-                                  widget.playerModel!.matchTotalLose,
+                              'isPlayable': true,
                             });
-
-                            //bitted player progress
-                            FirebaseFirestore.instance
-                                .collection('Maps')
-                                .doc(widget.gridData.userId)
-                                .update(widget.gridData.toMap());
-                            FirebaseFirestore.instance
-                                .collection('players')
-                                .doc(widget.gridData.userId)
-                                .update({
-                              "baseLiked": widget.gridData.like,
-                              "baseDisliked": widget.gridData.dislike,
-                            });
-                          } else {
-                            try {
-                              widget.gridData.isPlayable = true;
-                              await FirebaseFirestore.instance
-                                  .collection('Maps')
-                                  .doc(FirebaseAuth.instance.currentUser!.uid)
-                                  .set(widget.gridData.toMap());
-                              showCommonSnackbar(
-                                context,
-                                message: 'Map successfully Updated.',
-                                icon: Icons.save,
-                              );
-                            } catch (e) {
-                              showCommonSnackbar(
-                                context,
-                                message:
-                                    'An error occoured map could not saved successfully.',
-                                icon: Icons.error,
-                              );
-                            }
+                            showCommonSnackbar(
+                              context,
+                              message:
+                                  'Map updated! Get ready to beat your opponents!',
+                              icon: Icons.save,
+                            );
+                          } catch (e) {
+                            showCommonSnackbar(
+                              context,
+                              message:
+                                  'An error occoured map could not saved successfully.',
+                              icon: Icons.error,
+                            );
                           }
+                          Navigator.pop(context);
                         }
                         Navigator.pop(context);
                       },

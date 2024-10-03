@@ -1,37 +1,3 @@
-// import 'package:flame/collisions.dart';
-// import 'package:flame/components.dart';
-// import 'package:flutter/material.dart';
-
-// import '../brick_breaker.dart';
-// import '../config.dart';
-// import 'ball.dart';
-// import 'bat.dart';
-
-// class Brick extends RectangleComponent
-//     with CollisionCallbacks, HasGameReference<BrickBreaker> {
-//   Brick({required super.position, required Color color})
-//       : super(
-//           size: Vector2(brickWidth, brickHeight),
-//           anchor: Anchor.center,
-//           paint: Paint()
-//             ..color = color
-//             ..style = PaintingStyle.fill,
-//           children: [RectangleHitbox()],
-//         );
-
-//   @override
-//   void onCollisionStart(
-//       Set<Vector2> intersectionPoints, PositionComponent other) {
-//     super.onCollisionStart(intersectionPoints, other);
-//     removeFromParent();
-
-//     if (game.world.children.query<Brick>().length == 1) {
-//       game.world.removeAll(game.world.children.query<Ball>());
-//       game.world.removeAll(game.world.children.query<Bat>());
-//     }
-//   }
-// }
-
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -45,7 +11,7 @@ import 'package:shatterforge/src/config.dart';
 
 class Brick extends PositionComponent
     with CollisionCallbacks, HasGameReference<BrickBreaker> {
-  final TileModel tileData;
+  TileModel tileData;
 
   Brick(
       {required this.tileData, required super.size, required super.position}) {
@@ -56,11 +22,213 @@ class Brick extends PositionComponent
       case 'Ellipse':
         add(CircleHitbox()); // For ellipses
         break;
+      case 'Triangle':
+        add(PolygonHitbox(_getTriangleVertices())); // For triangles
+        break;
+
+      case 'Right Triangle':
+        add(PolygonHitbox(
+            _getRightTriangleVertices())); // Create a function to get vertices
+        break;
+
+      case 'Kite':
+        add(PolygonHitbox(
+            _getKiteVertices())); // Create a function to get vertices
+        break;
+
+      case 'Parallelogram':
+        add(PolygonHitbox(_getParallelogramVertices()));
+        break;
+
+      case 'Trapezium':
+        add(PolygonHitbox(_getTrapezoidVertices()));
+        break;
+
+      case 'Pentagon':
+        add(PolygonHitbox(_getPolygonVertices(5,
+            rotationAngle:
+                tileData.rotationAngle ?? 0))); // Example for a hexagon
+        break;
+
+      case 'Hexagon':
+        add(PolygonHitbox(_getPolygonVertices(6,
+            rotationAngle:
+                tileData.rotationAngle ?? 0))); // Example for a hexagon
+        break;
       default:
         add(RectangleHitbox()); // Default to rectangle hitbox if not handled
         break;
     }
   }
+
+/////////////collision detection start
+
+  List<Vector2> _getTriangleVertices() {
+    List<Vector2> vertices = [];
+
+    Rect rect = Rect.fromLTWH(0, 0, size.x, size.y);
+
+    switch (tileData.basePosition) {
+      case 'Bottom':
+        vertices.add(Vector2(rect.center.dx, rect.top));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        break;
+      case 'Top':
+        vertices.add(Vector2(rect.center.dx, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.right, rect.top));
+        break;
+      case 'Left':
+        vertices.add(Vector2(rect.right, rect.center.dy));
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        break;
+      case 'Right':
+        vertices.add(Vector2(rect.left, rect.center.dy));
+        vertices.add(Vector2(rect.right, rect.top));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        break;
+      default:
+        vertices.add(Vector2(rect.center.dx, rect.top));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        vertices.add(Vector2(rect.right, rect.bottom));
+    }
+
+    return vertices;
+  }
+
+  List<Vector2> _getRightTriangleVertices() {
+    List<Vector2> vertices = [];
+    print(tileData.basePosition);
+    Rect rect = Rect.fromLTWH(0, 0, size.x, size.y);
+    switch (tileData.orientation) {
+      case 'Bottom-left':
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        break;
+      case 'Top-left':
+        vertices.add(Vector2(rect.left, rect.bottom));
+        vertices.add(Vector2(rect.right, rect.top));
+        vertices.add(Vector2(rect.left, rect.top));
+        break;
+      case 'Bottom-right':
+        vertices.add(Vector2(rect.right, rect.top));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        break;
+      case 'Top-right':
+        vertices.add(Vector2(rect.right, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.right, rect.top));
+        break;
+      default:
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.bottom));
+    }
+    print(vertices.length);
+    return vertices;
+  }
+
+  List<Vector2> _getKiteVertices() {
+    Rect rect = Rect.fromLTWH(0, 0, size.x, size.y);
+    List<Vector2> vertices = [];
+    vertices.add(Vector2(rect.center.dx, rect.top));
+    vertices.add(Vector2(rect.left, rect.center.dy));
+    vertices.add(Vector2(rect.center.dx, rect.bottom));
+    vertices.add(Vector2(rect.right, rect.center.dy));
+    return vertices;
+  }
+
+  List<Vector2> _getParallelogramVertices() {
+    List<Vector2> vertices = [];
+    Rect rect = Rect.fromLTWH(0, 0, size.x, size.y);
+
+    switch (tileData.basePosition ?? 'Right') {
+      case 'Right':
+        vertices.add(Vector2(rect.left + rect.width / 4, rect.top));
+        vertices.add(Vector2(rect.right, rect.top));
+        vertices.add(Vector2(rect.right - rect.width / 4, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        break;
+      case 'Left':
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.right - rect.width / 4, rect.top));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        vertices.add(Vector2(rect.left + rect.width / 4, rect.bottom));
+        break;
+      case 'Top':
+        vertices.add(Vector2(rect.left, rect.top + rect.height / 4));
+        vertices.add(Vector2(rect.right, rect.top));
+        vertices.add(Vector2(rect.right, rect.bottom - rect.height / 4));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        break;
+      case 'Bottom':
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.right, rect.top + rect.height / 4));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.bottom - rect.height / 4));
+        break;
+    }
+
+    return vertices;
+  }
+
+  List<Vector2> _getTrapezoidVertices() {
+    List<Vector2> vertices = [];
+    Rect rect = Rect.fromLTWH(0, 0, size.x, size.y);
+    switch (tileData.basePosition) {
+      case 'Bottom':
+        vertices.add(Vector2(rect.left + rect.width / 4, rect.top));
+        vertices.add(Vector2(rect.right - rect.width / 4, rect.top));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        break;
+      case 'Top':
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.right, rect.top));
+        vertices.add(Vector2(rect.right - rect.width / 4, rect.bottom));
+        vertices.add(Vector2(rect.left + rect.width / 4, rect.bottom));
+        break;
+      case 'Left':
+        vertices.add(Vector2(rect.left, rect.top));
+        vertices.add(Vector2(rect.left, rect.bottom));
+        vertices.add(Vector2(rect.right, rect.bottom - rect.height / 4));
+        vertices.add(Vector2(rect.right, rect.top + rect.height / 4));
+        break;
+      case 'Right':
+        vertices.add(Vector2(rect.right, rect.top));
+        vertices.add(Vector2(rect.right, rect.bottom));
+        vertices.add(Vector2(rect.left, rect.bottom - rect.height / 4));
+        vertices.add(Vector2(rect.left, rect.top + rect.height / 4));
+        break;
+    }
+
+    return vertices;
+  }
+
+  List<Vector2> _getPolygonVertices(int sides, {double rotationAngle = 0}) {
+    List<Vector2> vertices = [];
+
+    Rect rect = Rect.fromLTWH(0, 0, size.x, size.y);
+    double centerX = rect.center.dx;
+    double centerY = rect.center.dy;
+    double radius = rect.width / 2;
+
+    double angle = (2 * 3.141592653589793) / sides;
+
+    for (int i = 0; i < sides; i++) {
+      double x = centerX + radius * Math.cos(i * angle + rotationAngle);
+      double y = centerY + radius * Math.sin(i * angle + rotationAngle);
+      vertices.add(Vector2(x, y));
+    }
+
+    return vertices;
+  }
+
+///////////collision detection end
 
   @override
   void render(Canvas canvas) {
@@ -111,6 +279,7 @@ class Brick extends PositionComponent
     }
   }
 
+///////////draw bricks design start
   void _drawTriangle(Canvas canvas, Paint paint, Rect rect,
       {required String basePosition}) {
     Path path = Path();
@@ -312,12 +481,17 @@ class Brick extends PositionComponent
     canvas.drawPath(path, paint);
   }
 
+///////draw bricks design end
   @override
   void onCollisionStart(
       Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
 
     if (!tileData.brickType.isBreakable) {
+      if (other is Ball) {
+        tileData.color = Colors.black;
+      }
+
       return;
     }
 

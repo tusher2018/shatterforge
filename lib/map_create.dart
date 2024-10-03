@@ -1,4 +1,4 @@
-// ignore_for_file: must_be_immutable
+// ignore_for_file: must_be_immutable, use_build_context_synchronously
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -47,18 +47,16 @@ class _MapCreatePageState extends State<MapCreatePage> {
   double selectedRotationAngle = 0;
 
   late List<BrickType> brickTypes;
+  bool isPlayable = false;
 
   Map<String, int> brickCounts = {
     'Standard': 0,
     'Unbreakable': 0,
     'Explosive': 0,
-    'Healing': 0,
     'Invisible': 0,
     'Speed': 0,
     'Multi-Hit': 0,
     'Power-Up': 0,
-    'Shifting': 0,
-    'Special': 0,
   };
 
   int totalBricks = 100;
@@ -69,7 +67,7 @@ class _MapCreatePageState extends State<MapCreatePage> {
   void initState() {
     super.initState();
     brickTypes = [
-      BrickType('Standard', 40, widget.playerData.standardWallHealth, true),
+      BrickType('Standard', 10000, widget.playerData.standardWallHealth, true),
       BrickType('Unbreakable', 25, 100, false),
       BrickType('Explosive', 5, widget.playerData.explosiveWallHealth, true),
       BrickType('Speed', 5, widget.playerData.speedWallHealth, true),
@@ -96,12 +94,16 @@ class _MapCreatePageState extends State<MapCreatePage> {
               brickTypes.indexWhere((type) => type.name == selectedBrickType);
 
           tileAttributes[tappedTile] = TileModel(
-              position: tappedTile,
-              color: (selectedBrickType == "Invisible")
-                  ? Colors.transparent
-                  : currentColor,
-              brickType: brickTypes[currentIndex],
-              shape: selectedShape);
+            position: tappedTile,
+            color: (selectedBrickType == "Invisible")
+                ? Colors.transparent
+                : currentColor,
+            brickType: brickTypes[currentIndex],
+            shape: selectedShape,
+            basePosition: selectedBasePosition,
+            orientation: selectedOrientation,
+            rotationAngle: selectedRotationAngle,
+          );
         } else {
           for (int i = 0; i < brickTypes.length; i++) {
             selectedBrickType = brickTypes[i].name;
@@ -110,14 +112,15 @@ class _MapCreatePageState extends State<MapCreatePage> {
                   position: tappedTile,
                   color: currentColor,
                   brickType: brickTypes[i],
-                  shape: selectedShape);
+                  shape: selectedShape,
+                  basePosition: selectedBasePosition,
+                  orientation: selectedOrientation,
+                  rotationAngle: selectedRotationAngle);
 
               break;
             }
           }
         }
-        // tileAttributes[tappedTile] = TileModel(
-        //     position: tappedTile, color: currentColor, shape: selectedShape);
       } else {
         selectedShape = tileAttributes[tappedTile]!.shape;
         if (tileAttributes[tappedTile]!.color != Colors.transparent) {
@@ -156,7 +159,28 @@ class _MapCreatePageState extends State<MapCreatePage> {
         easy: easy,
         medium: medium,
         tileAttributes: tileAttributes,
-        isPlayable: isReady);
+        isPlayable: false);
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('Maps')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .set(gridData.toMap());
+
+      print('Tile attributes successfully saved to Firestore');
+      showCommonSnackbar(
+        context,
+        message: 'Map successfully Updated.',
+        icon: Icons.save,
+      );
+    } catch (e) {
+      print('Error saving tile attributes to Firestore: $e');
+      showCommonSnackbar(
+        context,
+        message: 'An error occoured map could not saved successfully.',
+        icon: Icons.error,
+      );
+    }
 
     if (isReady) {
       Navigator.push(context, MaterialPageRoute(
@@ -165,30 +189,10 @@ class _MapCreatePageState extends State<MapCreatePage> {
           return GameApp(
             gridData: gridData,
             playerModel: null,
+            playerTest: true,
           );
         },
       ));
-    } else {
-      try {
-        await FirebaseFirestore.instance
-            .collection('Maps')
-            .doc(FirebaseAuth.instance.currentUser!.uid)
-            .set(gridData.toMap());
-
-        print('Tile attributes successfully saved to Firestore');
-        showCommonSnackbar(
-          context,
-          message: 'Map successfully Updated.',
-          icon: Icons.save,
-        );
-      } catch (e) {
-        print('Error saving tile attributes to Firestore: $e');
-        showCommonSnackbar(
-          context,
-          message: 'An error occoured map could not saved successfully.',
-          icon: Icons.error,
-        );
-      }
     }
   }
 
@@ -213,6 +217,7 @@ class _MapCreatePageState extends State<MapCreatePage> {
         hard = gridData.hard;
         dislike = gridData.dislike;
         like = gridData.like;
+        isPlayable = gridData.isPlayable;
 
         tileAttributes = gridData.tileAttributes;
 
@@ -599,28 +604,102 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                                 dropdownColor: Colors.black54,
                                                 value: selectedBrickType,
                                                 onChanged: (String? newValue) {
-                                                  setState(() {
-                                                    selectedBrickType =
-                                                        newValue!;
+                                                  // setState(() {
+                                                  //   selectedBrickType =
+                                                  //       newValue!;
+                                                  //   if (selectedTile != null) {
+                                                  //     int index = brickTypes
+                                                  //         .indexWhere((type) =>
+                                                  //             type.name ==
+                                                  //             newValue);
+                                                  //     tileAttributes[
+                                                  //                 selectedTile!]!
+                                                  //             .brickType =
+                                                  //         brickTypes[index];
+                                                  //     if (newValue ==
+                                                  //         "Invisible") {
+                                                  //       tileAttributes[
+                                                  //                   selectedTile!]!
+                                                  //               .color =
+                                                  //           Colors.transparent;
+                                                  //     }
+                                                  //   }
+                                                  // });
 
-                                                    if (selectedTile != null) {
-                                                      int index = brickTypes
-                                                          .indexWhere((type) =>
-                                                              type.name ==
-                                                              newValue);
-                                                      tileAttributes[
-                                                                  selectedTile!]!
-                                                              .brickType =
-                                                          brickTypes[index];
-                                                      if (newValue ==
-                                                          "Invisible") {
+                                                  if (selectedTile != null &&
+                                                      newValue != null) {
+                                                    setState(() {
+                                                      // Get the current brick type of the selected tile
+                                                      String oldBrickType =
+                                                          tileAttributes[
+                                                                  selectedTile]!
+                                                              .brickType
+                                                              .name;
+
+                                                      int currentTotalBricks =
+                                                          brickCounts.values
+                                                              .reduce((a, b) =>
+                                                                  a + b);
+
+                                                      // Check if the new brick type can be added
+                                                      if (canAddBrick(newValue,
+                                                          currentTotalBricks)) {
+                                                        // Reduce the count of the old brick type
+                                                        if (brickCounts
+                                                            .containsKey(
+                                                                oldBrickType)) {
+                                                          brickCounts[
+                                                              oldBrickType] = (brickCounts[
+                                                                      oldBrickType]! -
+                                                                  1)
+                                                              .clamp(
+                                                                  0,
+                                                                  brickCounts[
+                                                                      oldBrickType]!);
+                                                        }
+
+                                                        // Increment the count for the new brick type
+                                                        brickCounts[newValue] =
+                                                            (brickCounts[
+                                                                        newValue] ??
+                                                                    0) +
+                                                                1;
+
+                                                        // Update the brick type for the selected tile
+                                                        int index = brickTypes
+                                                            .indexWhere(
+                                                                (type) =>
+                                                                    type.name ==
+                                                                    newValue);
                                                         tileAttributes[
-                                                                    selectedTile!]!
-                                                                .color =
-                                                            Colors.transparent;
+                                                                    selectedTile]!
+                                                                .brickType =
+                                                            brickTypes[index];
+
+                                                        // If the new type is "Invisible", change the color to transparent
+                                                        if (newValue ==
+                                                            "Invisible") {
+                                                          tileAttributes[
+                                                                      selectedTile]!
+                                                                  .color =
+                                                              Colors
+                                                                  .transparent;
+                                                        }
+
+                                                        selectedBrickType =
+                                                            newValue;
+                                                        showCommonSnackbar(
+                                                            context,
+                                                            message:
+                                                                'Changed to $newValue brick');
+                                                      } else {
+                                                        showCommonSnackbar(
+                                                            context,
+                                                            message:
+                                                                'Cannot change to $newValue brick, limit reached');
                                                       }
-                                                    }
-                                                  });
+                                                    });
+                                                  }
                                                 },
                                                 items: brickTypes
                                                     .map((BrickType brickType) {
@@ -642,11 +721,34 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                   Center(
                                     child: InkWell(
                                       onTap: () {
-                                        if (selectedTile != null) {
+                                        if (selectedTile != null &&
+                                            tileAttributes
+                                                .containsKey(selectedTile)) {
+                                          // Get the brick type of the selected tile before removing it
+                                          String brickType =
+                                              tileAttributes[selectedTile]!
+                                                  .brickType
+                                                  .name;
+
+                                          // Remove the tile from the attributes map
                                           tileAttributes.remove(selectedTile);
+
+                                          // Reduce the count of the deleted brick type
+                                          if (brickCounts
+                                              .containsKey(brickType)) {
+                                            brickCounts[brickType] =
+                                                (brickCounts[brickType]! - 1)
+                                                    .clamp(
+                                                        0,
+                                                        brickCounts[
+                                                            brickType]!);
+                                          }
+
+                                          // Clear the selected tile and update the UI
                                           selectedTile = null;
                                           setState(() {});
-                                          print(tileAttributes[selectedTile]);
+
+                                          print('Deleted $brickType brick');
                                         }
                                       },
                                       child: Row(
@@ -770,6 +872,10 @@ class _MapCreatePageState extends State<MapCreatePage> {
                                 }),
                               ],
                             ),
+                            (isPlayable)
+                                ? commonText("ready to beat your opponents")
+                                : commonText(
+                                    "Get ready to outplay your opponents!")
                           ],
                         ),
                       ),

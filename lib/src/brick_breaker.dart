@@ -185,7 +185,19 @@ class BrickBreaker extends FlameGame
       }
     }
 
-    if (world.children.query<Brick>().isEmpty &&
+    // if (world.children.query<Brick>().isEmpty &&
+    //     playState == PlayState.playing) {
+    //   playState = PlayState.won;
+    //   world.removeAll(world.children.query<Ball>());
+    //   world.removeAll(world.children.query<Bat>());
+    // }
+
+    if (world.children.query<Brick>().where((brick) {
+          // Filter breakable bricks based on their category
+          final tileData = (brick).tileData;
+          return tileData.brickType.isBreakable &&
+              tileData.brickType.name != 'Unbreakable';
+        }).isEmpty &&
         playState == PlayState.playing) {
       playState = PlayState.won;
       world.removeAll(world.children.query<Ball>());
