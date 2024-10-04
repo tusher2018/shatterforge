@@ -3,6 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shatterforge/playerModel.dart';
+import 'package:shatterforge/profile.dart';
 import 'package:shatterforge/src/components/commonText.dart';
 import 'package:shatterforge/src/config.dart';
 
@@ -96,84 +97,118 @@ class _LeaderboardState extends State<Leaderboard> {
           Image.asset(
             'assets/images/background.jpg',
             fit: BoxFit.cover,
+            color: Colors.black26,
+            colorBlendMode: BlendMode.colorBurn,
           ),
-          Column(
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.pop(context);
-                },
-                child: const Icon(Icons.arrow_back_ios),
-              ),
-              // Scrollable and Tappable Categories
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: categories.map((category) {
-                    bool isSelected = selectedCategory == category;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedCategory =
-                              category; // Update selected category
-                        });
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: isSelected ? primaryColor : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: commonText(
-                            category,
-                            size: 11,
-                            color: Colors.black,
-                          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20.0),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                        },
+                        child: const Icon(
+                          Icons.arrow_back_ios,
+                          color: Colors.white,
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    Expanded(
+                        child: Center(
+                      child: commonText("LeaderShip       ",
+                          isBold: true, size: 20),
+                    ))
+                  ],
                 ),
-              ),
-              Expanded(
-                child: FutureBuilder<List<PlayerModel>>(
-                  future: _leaderboardDataFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(child: commonText('No player data found'));
-                    }
-
-                    var playersList = snapshot.data!;
-                    var filteredPlayers =
-                        _filterAndSortPlayers(playersList, selectedCategory);
-                    return ListView.builder(
-                      itemCount: filteredPlayers.length,
-                      itemBuilder: (context, index) {
-                        var player = filteredPlayers[index];
-                        return ListTile(
-                          title: commonText('Player: ${player.name}'),
-                          subtitle: commonText(
-                              'Matches Played: ${player.matchTotalWin + player.matchTotalLose}, Wins: ${player.matchTotalWin}, Losses: ${player.matchTotalLose}, Bricks Destroyed: ${player.totalBricksDestroyed}'),
-                          trailing: const Icon(Icons.leaderboard,
-                              color: Colors.green),
-                          onTap: () {
-                            // Handle any actions on tap
-                          },
-                        );
-                      },
-                    );
-                  },
+                const SizedBox(
+                  height: 16,
                 ),
-              )
-            ],
+                // Scrollable and Tappable Categories
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: categories.map((category) {
+                      bool isSelected = selectedCategory == category;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedCategory =
+                                category; // Update selected category
+                          });
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: isSelected ? primaryColor : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: commonText(
+                              category,
+                              size: 11,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(
+                  height: 8,
+                ),
+                Expanded(
+                  child: FutureBuilder<List<PlayerModel>>(
+                    future: _leaderboardDataFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                            child: commonText('No player data found'));
+                      }
+
+                      var playersList = snapshot.data!;
+                      var filteredPlayers =
+                          _filterAndSortPlayers(playersList, selectedCategory);
+                      return ListView.builder(
+                        itemCount: filteredPlayers.length,
+                        itemBuilder: (context, index) {
+                          var player = filteredPlayers[index];
+                          return ListTile(
+                            title: commonText('Player: ${player.name}',
+                                isBold: true),
+                            subtitle: commonText(
+                                'Matches Played: ${player.matchTotalWin + player.matchTotalLose}, Wins: ${player.matchTotalWin}, Losses: ${player.matchTotalLose},\nBricks Destroyed: ${player.totalBricksDestroyed}, Base Liked: ${player.baseLiked}',
+                                isBold: true),
+                            trailing: const Icon(Icons.leaderboard,
+                                color: primaryColor),
+                            onTap: () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PlayerProfilePage(
+                                      profile: player,
+                                    ),
+                                  ));
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                )
+              ],
+            ),
           )
         ],
       ),

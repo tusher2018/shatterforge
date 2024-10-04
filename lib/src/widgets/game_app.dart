@@ -80,7 +80,8 @@ class _GameAppState extends State<GameApp> {
     if (widget.playerTest) {
       health = 10;
     }
-    game = BrickBreaker(gridData: widget.gridData, playerHealth: health);
+    game =
+        BrickBreaker(context, gridData: widget.gridData, playerHealth: health);
     if (widget.gridData.dislike > widget.gridData.like) {
       isLiked = false;
     } else {

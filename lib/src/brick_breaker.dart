@@ -35,8 +35,10 @@ class BrickBreaker extends FlameGame
   late Bat bat;
   int playerHealth = 1;
   int brickBreak = 0;
+  BuildContext context;
 
-  BrickBreaker({
+  BrickBreaker(
+    this.context, {
     required this.gridData,
     this.playerHealth = 3,
   }) : super();
@@ -82,6 +84,8 @@ class BrickBreaker extends FlameGame
   @override
   FutureOr<void> onLoad() async {
     super.onLoad();
+
+    final EdgeInsets safeAreaInsets = MediaQuery.of(context).padding;
 
     camera.viewfinder.anchor = Anchor.topLeft;
 
@@ -144,18 +148,39 @@ class BrickBreaker extends FlameGame
     world.add(bat);
     world.add(ball);
     //Add Bricks...
+    // world.addAll([
+    //   for (var i = 0; i < gridData.column; i++)
+    //     for (var j = 0; j < gridData.row; j++)
+    //       if (gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())] !=
+    //           null)
+    //         Brick(
+    //           position: Vector2((size.x / gridData.column) * i,
+    //               ((size.y * 0.5) / gridData.row) * j),
+    //           tileData:
+    //               gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())]!,
+    //           size: Vector2(
+    //               size.x / gridData.column, (size.y * 0.5) / gridData.row),
+    //         ),
+    // ]);
+
+    // Add Bricks and adjust for safe area
     world.addAll([
-      for (var i = 0; i < gridData.row; i++)
-        for (var j = 0; j < gridData.column; j++)
+      for (var i = 0; i < gridData.column; i++)
+        for (var j = 0; j < gridData.row; j++)
           if (gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())] !=
               null)
             Brick(
-              position: Vector2((size.x / gridData.column) * i,
-                  ((size.y * 0.5) / gridData.row) * j),
+              position: Vector2(
+                (size.x / gridData.column) * i,
+                ((size.y * 0.5) / gridData.row) * j +
+                    safeAreaInsets.top, // Adjust for top safe area
+              ),
               tileData:
                   gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())]!,
               size: Vector2(
-                  size.x / gridData.column, (size.y * 0.5) / gridData.row),
+                size.x / gridData.column,
+                (size.y * 0.5) / gridData.row,
+              ),
             ),
     ]);
   }
@@ -184,14 +209,6 @@ class BrickBreaker extends FlameGame
         loseLife(); // Lose a life if ball falls below the bat
       }
     }
-
-    // if (world.children.query<Brick>().isEmpty &&
-    //     playState == PlayState.playing) {
-    //   playState = PlayState.won;
-    //   world.removeAll(world.children.query<Ball>());
-    //   world.removeAll(world.children.query<Bat>());
-    // }
-
     if (world.children.query<Brick>().where((brick) {
           // Filter breakable bricks based on their category
           final tileData = (brick).tileData;
@@ -290,4 +307,67 @@ class BrickBreaker extends FlameGame
     }
     return KeyEventResult.handled;
   }
+
+/////////////////Bricks around
+
+  List<Brick> getSurroundingBricks(Vector2 position) {
+    final List<Brick> surroundingBricks = [];
+
+    // Convert brick position to grid coordinates (assuming a fixed grid size)
+    final int column = (position.x / (size.x / gridData.column)).floor();
+    final int row = (position.y / ((size.y * 0.5) / gridData.row)).floor();
+
+    // Get the surrounding positions in the grid (top-left, top, top-right, left, right, bottom-left, bottom, bottom-right)
+    final List<Offset> surroundingPositions = [
+      Offset(column - 1, row - 1),
+      Offset(column - 0, row - 1),
+      Offset(column + 1, row - 1),
+      Offset(column - 1, row - 0),
+      Offset(column + 1, row - 0),
+      Offset(column - 1, row + 1),
+      Offset(column - 0, row + 1),
+      Offset(column + 1, row + 1),
+    ];
+
+    // Iterate through the surrounding positions and add valid bricks
+    for (final Offset offset in surroundingPositions) {
+      // Ensure the calculated position is within the bounds of the grid
+      if (offset.dx >= 0 &&
+          offset.dx < gridData.column &&
+          offset.dy >= 0 &&
+          offset.dy < gridData.row) {
+        final Brick? brick = _getBrickAtGridPosition(offset);
+        if (brick != null) {
+          surroundingBricks.add(brick);
+        }
+      }
+    }
+
+    return surroundingBricks;
+  }
+
+  Brick? _getBrickAtGridPosition(Offset gridPosition) {
+    // Check if there's a valid brick at this grid position
+    if (gridData.tileAttributes.containsKey(gridPosition)) {
+      final tileData = gridData.tileAttributes[gridPosition];
+      if (tileData != null) {
+        final Vector2 brickPosition = Vector2(
+          (size.x / gridData.column) * gridPosition.dx,
+          ((size.y * 0.5) / gridData.row) * gridPosition.dy,
+        );
+        return Brick(
+          position: brickPosition,
+          tileData: tileData,
+          size: Vector2(
+            size.x / gridData.column,
+            (size.y * 0.5) / gridData.row,
+          ),
+        );
+      }
+    }
+
+    return null; // No brick at this position
+  }
+
+//////////////
 }

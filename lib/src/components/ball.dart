@@ -34,7 +34,6 @@ class Ball extends CircleComponent
       return;
     }
     position += velocity * dt;
-
     // Prevent ball from going off-screen
     if (position.x - radius <= 0) {
       // Left side collision

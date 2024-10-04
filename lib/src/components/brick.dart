@@ -1,5 +1,7 @@
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+
+import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
 import 'package:shatterforge/TileData.dart';
 import 'dart:math' as Math;
@@ -502,6 +504,25 @@ class Brick extends PositionComponent
       }
 
       if (tileData.brickType.health <= 0) {
+        switch (tileData.brickType.name) {
+          case 'Speed':
+            _increaseBallSpeed(
+                other); // Increase ball speed when Speed brick is destroyed
+            break;
+          case 'Power-Up':
+            _applyPowerUpEffect(); // Apply Power-Up effects
+            break;
+          case 'Multi-Hit':
+            // Implement logic for Multi-Hit bricks, if needed
+            break;
+          case 'Explosive':
+            _triggerExplosionEffect();
+            break;
+          // Add more cases as needed
+          default:
+            break;
+        }
+
         removeFromParent();
         game.brickBreak += 1;
       } else {
@@ -509,4 +530,63 @@ class Brick extends PositionComponent
       }
     }
   }
+
+///////////
+
+  void _increaseBallSpeed(Ball ball) {
+    const double speedIncreaseFactor = 1.2;
+    ball.velocity.scale(speedIncreaseFactor);
+  }
+
+  void _applyPowerUpEffect() {
+    _boostSurroundingBricks();
+  }
+
+  void _boostSurroundingBricks() {
+    final List<Brick> surroundingBricks = game.getSurroundingBricks(Vector2(
+        tileData.position.dx, tileData.position.dy)); // Get surrounding bricks
+    for (var brick in surroundingBricks) {
+      if (brick.tileData.brickType.isBreakable) {
+        brick.tileData.brickType.health += 50;
+      }
+    }
+  }
+
+///////////////
+
+  void _triggerExplosionEffect() {
+    final List<Brick> surroundingBricks = game.getSurroundingBricks(
+        Vector2(tileData.position.dx, tileData.position.dy));
+
+    for (var brick in surroundingBricks) {
+      // Trigger particle effect before removing the brick
+      _addExplosionEffect(brick.position, brick.size);
+
+      // Remove the brick
+      brick.removeFromParent(); // Destroy surrounding bricks
+    }
+  }
+
+  void _addExplosionEffect(Vector2 position, Vector2 size) {
+    final explosionEffect = ParticleSystemComponent(
+      position: position,
+      particle: Particle.generate(
+        count: 20,
+        lifespan: 0.3, // Duration of the particle effect
+        generator: (i) => AcceleratedParticle(
+          acceleration: Vector2(0, 200),
+          speed: Vector2.random() * 200,
+          position: position,
+          child: CircleParticle(
+            radius: size.x / 10,
+            paint: Paint()..color = Colors.red,
+          ),
+        ),
+      ),
+    );
+
+    game.world.add(explosionEffect); // Add the effect to the game world
+  }
+
+///////////////
 }

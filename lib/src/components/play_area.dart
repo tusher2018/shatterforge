@@ -28,7 +28,7 @@ class PlayArea extends RectangleComponent with HasGameReference<BrickBreaker> {
     paintImage(
       canvas: canvas,
       image: backgroundImage,
-      rect: Rect.fromLTWH(0, 10, size.x, size.y),
+      rect: Rect.fromLTWH(0, 0, size.x, size.y),
       fit: BoxFit
           .cover, // You can change this to 'BoxFit.contain', 'BoxFit.fill', etc.
     );
