@@ -74,6 +74,7 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
         // Update state with player data
         setState(() {
           _playerData = playerData;
+          balldamage = playerData.ballDamage;
         });
 
         print('Player data loaded successfully');

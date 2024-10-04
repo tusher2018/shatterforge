@@ -114,8 +114,8 @@ class _GameAppState extends State<GameApp> {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: SizedBox(
-              width: Config.screenWidth,
-              height: Config.screenHeight,
+              width: MediaQuery.sizeOf(context).width,
+              height: MediaQuery.sizeOf(context).height,
               child: GameWidget(
                 game: game,
                 overlayBuilderMap: {

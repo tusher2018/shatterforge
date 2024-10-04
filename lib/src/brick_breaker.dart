@@ -7,9 +7,9 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shatterforge/TileData.dart';
+import 'package:shatterforge/src/config.dart';
 
 import 'components/components.dart';
-import 'config.dart';
 
 enum PlayState {
   playing,
@@ -90,9 +90,9 @@ class BrickBreaker extends FlameGame
     camera.viewfinder.anchor = Anchor.topLeft;
 
     world.add(PlayArea());
-    final double ballVerticalOffset = Config.batHeight * 1.5;
-    final Vector2 ballPosition = Vector2(
-        width / 2, height * 0.95 - Config.ballRadius - ballVerticalOffset);
+    final double ballVerticalOffset = batHeight * 1.5;
+    final Vector2 ballPosition =
+        Vector2(width / 2, height * 0.95 - ballRadius - ballVerticalOffset);
     final Vector2 batPosition = Vector2(width / 2, height * 0.95);
 
     switch (playerHealth) {
@@ -135,41 +135,25 @@ class BrickBreaker extends FlameGame
 
     ball = Ball(
         difficultyModifier: difficultyModifier,
-        radius: Config.ballRadius,
+        radius: ballRadius,
         position: ballPosition,
         velocity: Vector2((rand.nextDouble() - 0.5) * width, height * 0.2)
             .normalized()
           ..scale(height / 4));
     bat = Bat(
-        size: Vector2(Config.batWidth, Config.batHeight),
-        cornerRadius: Radius.circular(Config.ballRadius / 2),
+        size: Vector2(batWidth, batHeight),
+        cornerRadius: Radius.circular(ballRadius / 2),
         position: batPosition);
 
     world.add(bat);
     world.add(ball);
-    //Add Bricks...
-    // world.addAll([
-    //   for (var i = 0; i < gridData.column; i++)
-    //     for (var j = 0; j < gridData.row; j++)
-    //       if (gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())] !=
-    //           null)
-    //         Brick(
-    //           position: Vector2((size.x / gridData.column) * i,
-    //               ((size.y * 0.5) / gridData.row) * j),
-    //           tileData:
-    //               gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())]!,
-    //           size: Vector2(
-    //               size.x / gridData.column, (size.y * 0.5) / gridData.row),
-    //         ),
-    // ]);
-
-    // Add Bricks and adjust for safe area
     world.addAll([
       for (var i = 0; i < gridData.column; i++)
         for (var j = 0; j < gridData.row; j++)
           if (gridData.tileAttributes[Offset(i.toDouble(), j.toDouble())] !=
               null)
             Brick(
+              context: context,
               position: Vector2(
                 (size.x / gridData.column) * i,
                 ((size.y * 0.5) / gridData.row) * j +
@@ -205,8 +189,8 @@ class BrickBreaker extends FlameGame
 
     if (playState == PlayState.playing) {
       // Check if the ball is out of bounds (below the screen)
-      if (ball.position.y > size.y) {
-        loseLife(); // Lose a life if ball falls below the bat
+      if (world.children.query<Ball>().isEmpty) {
+        loseLife();
       }
     }
     if (world.children.query<Brick>().where((brick) {
@@ -226,20 +210,20 @@ class BrickBreaker extends FlameGame
   void resetBall() {
     world.removeAll(world.children.query<Ball>());
     world.removeAll(world.children.query<Bat>());
-    final double ballVerticalOffset = Config.batHeight * 1.5;
-    final Vector2 ballPosition = Vector2(
-        width / 2, height * 0.95 - Config.ballRadius - ballVerticalOffset);
+    final double ballVerticalOffset = batHeight * 1.5;
+    final Vector2 ballPosition =
+        Vector2(width / 2, height * 0.95 - ballRadius - ballVerticalOffset);
     final Vector2 batPosition = Vector2(width / 2, height * 0.95);
     ball = Ball(
         difficultyModifier: difficultyModifier,
-        radius: Config.ballRadius,
+        radius: ballRadius,
         position: ballPosition,
         velocity: Vector2((rand.nextDouble() - 0.5) * width, height * 0.2)
             .normalized()
           ..scale(height / 4));
     bat = Bat(
-        size: Vector2(Config.batWidth, Config.batHeight),
-        cornerRadius: Radius.circular(Config.ballRadius / 2),
+        size: Vector2(batWidth, batHeight),
+        cornerRadius: Radius.circular(ballRadius / 2),
         position: batPosition);
 
     world.add(bat);
@@ -298,9 +282,9 @@ class BrickBreaker extends FlameGame
     super.onKeyEvent(event, keysPressed);
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowLeft:
-        world.children.query<Bat>().first.moveBy(-Config.batStep);
+        world.children.query<Bat>().first.moveBy(-batStep);
       case LogicalKeyboardKey.arrowRight:
-        world.children.query<Bat>().first.moveBy(Config.batStep);
+        world.children.query<Bat>().first.moveBy(batStep);
       case LogicalKeyboardKey.space: // Add from here...
       case LogicalKeyboardKey.enter:
         startGame();
@@ -308,66 +292,131 @@ class BrickBreaker extends FlameGame
     return KeyEventResult.handled;
   }
 
-/////////////////Bricks around
+/////////////////////
 
-  List<Brick> getSurroundingBricks(Vector2 position) {
-    final List<Brick> surroundingBricks = [];
+  // // Power-up logic for cloning balls
+  // void handleBallClonePowerUp() {
+  //   Iterable<Ball> balls = world.children.query<Ball>();
+  //   int currentBallCount = balls.length;
+  //   print(currentBallCount);
 
-    // Convert brick position to grid coordinates (assuming a fixed grid size)
-    final int column = (position.x / (size.x / gridData.column)).floor();
-    final int row = (position.y / ((size.y * 0.5) / gridData.row)).floor();
+  //   if (currentBallCount < 50) {
+  //     for (Ball ball in balls) {
+  //       Vector2 randomVelocity = Vector2(
+  //         ball.velocity.x +
+  //             (math.Random().nextDouble() - 0.5) *
+  //                 2, // Slight variation on X-axis
+  //         ball.velocity.y +
+  //             (math.Random().nextDouble() - 0.5) *
+  //                 2, // Slight variation on Y-axis
+  //       );
+  //       Ball newBall = Ball(
+  //           velocity: randomVelocity,
+  //           position: ball.position,
+  //           radius: ball.radius,
+  //           difficultyModifier: ball.difficultyModifier);
+  //       world.add(newBall);
+  //     }
+  //   }
+  // }
 
-    // Get the surrounding positions in the grid (top-left, top, top-right, left, right, bottom-left, bottom, bottom-right)
-    final List<Offset> surroundingPositions = [
-      Offset(column - 1, row - 1),
-      Offset(column - 0, row - 1),
-      Offset(column + 1, row - 1),
-      Offset(column - 1, row - 0),
-      Offset(column + 1, row - 0),
-      Offset(column - 1, row + 1),
-      Offset(column - 0, row + 1),
-      Offset(column + 1, row + 1),
-    ];
+  // // Power-up logic for max damage ball
+  // void handleMaxDamageBallPowerUp() {
+  //   int originalDamage = balldamage;
+  //   balldamage = 100000;
+  //   Future.delayed(Duration(seconds: 5), () {
+  //     balldamage = originalDamage;
+  //   });
+  // }
 
-    // Iterate through the surrounding positions and add valid bricks
-    for (final Offset offset in surroundingPositions) {
-      // Ensure the calculated position is within the bounds of the grid
-      if (offset.dx >= 0 &&
-          offset.dx < gridData.column &&
-          offset.dy >= 0 &&
-          offset.dy < gridData.row) {
-        final Brick? brick = _getBrickAtGridPosition(offset);
-        if (brick != null) {
-          surroundingBricks.add(brick);
-        }
+  // // Power-up logic for speeding up the ball
+  // void handleSpeedUpBallPowerUp() {
+  //   Iterable<Ball> balls = world.children.query<Ball>();
+  //   for (Ball ball in balls) {
+  //     _increaseBallSpeed(ball);
+  //   }
+  // }
+
+  // void _increaseBallSpeed(Ball ball) {
+  //   const double speedIncreaseFactor = 1.2;
+  //   Vector2 originalVelocity = ball.velocity.clone();
+  //   ball.velocity.scale(speedIncreaseFactor);
+  //   Future.delayed(Duration(seconds: 5), () {
+  //     ball.velocity.setFrom(originalVelocity);
+  //   });
+  // }
+
+// Power-up logic for cloning balls
+  void handleBallClonePowerUp() {
+    final Iterable<Ball> balls = world.children.query<Ball>();
+    final int currentBallCount = balls.length;
+    print(currentBallCount);
+
+    // Define max balls constant
+    const int maxBalls = 100;
+
+    if (currentBallCount < maxBalls) {
+      final math.Random random =
+          math.Random(); // Create a single instance of Random
+      for (Ball ball in balls) {
+        Vector2 randomVelocity = Vector2(
+          ball.velocity.x +
+              (random.nextDouble() - 0.5) * 2, // Slight variation on X-axis
+          ball.velocity.y +
+              (random.nextDouble() - 0.5) * 2, // Slight variation on Y-axis
+        );
+        Ball newBall = Ball(
+          velocity: randomVelocity,
+          position: ball.position
+              .clone(), // Ensure the new ball has a unique position
+          radius: ball.radius,
+          difficultyModifier: ball.difficultyModifier,
+        );
+        world.add(newBall);
       }
     }
-
-    return surroundingBricks;
   }
 
-  Brick? _getBrickAtGridPosition(Offset gridPosition) {
-    // Check if there's a valid brick at this grid position
-    if (gridData.tileAttributes.containsKey(gridPosition)) {
-      final tileData = gridData.tileAttributes[gridPosition];
-      if (tileData != null) {
-        final Vector2 brickPosition = Vector2(
-          (size.x / gridData.column) * gridPosition.dx,
-          ((size.y * 0.5) / gridData.row) * gridPosition.dy,
-        );
-        return Brick(
-          position: brickPosition,
-          tileData: tileData,
-          size: Vector2(
-            size.x / gridData.column,
-            (size.y * 0.5) / gridData.row,
-          ),
-        );
-      }
+// Power-up logic for max damage ball
+  void handleMaxDamageBallPowerUp() {
+    const int maxDamage = 100000; // Define as a constant
+    final int originalDamage = balldamage;
+    balldamage = maxDamage;
+
+    // Use a single function to reset the damage
+    _resetDamageAfterDelay(originalDamage, 5);
+  }
+
+// Power-up logic for speeding up the ball
+  void handleSpeedUpBallPowerUp() {
+    final Iterable<Ball> balls = world.children.query<Ball>();
+    for (Ball ball in balls) {
+      _increaseBallSpeed(ball);
     }
-
-    return null; // No brick at this position
   }
 
-//////////////
+// Method to increase ball speed
+  void _increaseBallSpeed(Ball ball) {
+    const double speedIncreaseFactor = 1.2;
+    final Vector2 originalVelocity = ball.velocity.clone();
+    ball.velocity.scale(speedIncreaseFactor);
+
+    // Use a single function to reset the velocity after a delay
+    _resetVelocityAfterDelay(ball, originalVelocity, 5);
+  }
+
+// Reset damage to original value after a delay
+  void _resetDamageAfterDelay(int originalDamage, int seconds) {
+    Future.delayed(Duration(seconds: seconds), () {
+      balldamage = originalDamage;
+    });
+  }
+
+// Reset ball velocity to original after a delay
+  void _resetVelocityAfterDelay(
+      Ball ball, Vector2 originalVelocity, int seconds) {
+    Future.delayed(Duration(seconds: seconds), () {
+      ball.velocity.setFrom(originalVelocity);
+    });
+  }
 }

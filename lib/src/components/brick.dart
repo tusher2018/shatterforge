@@ -1,22 +1,24 @@
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 
-import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
 import 'package:shatterforge/TileData.dart';
 import 'dart:math' as Math;
-
 import 'package:shatterforge/src/brick_breaker.dart';
-
-import 'package:shatterforge/src/components/ball.dart';
+import 'package:shatterforge/src/components/components.dart';
 import 'package:shatterforge/src/config.dart';
 
 class Brick extends PositionComponent
     with CollisionCallbacks, HasGameReference<BrickBreaker> {
   TileModel tileData;
+  BuildContext context;
 
   Brick(
-      {required this.tileData, required super.size, required super.position}) {
+      {required this.context,
+      required this.tileData,
+      required super.size,
+      required super.position}) {
     switch (tileData.shape) {
       case 'Rectangle':
         add(RectangleHitbox()); // For rectangles
@@ -502,21 +504,23 @@ class Brick extends PositionComponent
           tileData.color == Colors.transparent) {
         tileData.color = Colors.white;
       }
+      if (Math.Random().nextDouble() < 0.3 && Math.Random().nextBool()) {
+        _applyPowerUpEffect();
+      }
 
       if (tileData.brickType.health <= 0) {
         switch (tileData.brickType.name) {
           case 'Speed':
-            _increaseBallSpeed(
-                other); // Increase ball speed when Speed brick is destroyed
+            _increaseBallSpeed(other);
             break;
-          case 'Power-Up':
-            _applyPowerUpEffect(); // Apply Power-Up effects
+          case 'Healing':
+            _applyHealingEffect();
             break;
           case 'Multi-Hit':
-            // Implement logic for Multi-Hit bricks, if needed
             break;
-          case 'Explosive':
-            _triggerExplosionEffect();
+          case 'Shake':
+            _applyShakeEffect(
+                Vector2(tileData.position.dx, tileData.position.dy));
             break;
           // Add more cases as needed
           default:
@@ -526,67 +530,235 @@ class Brick extends PositionComponent
         removeFromParent();
         game.brickBreak += 1;
       } else {
-        tileData.brickType.health -= Config.balldamage;
+        tileData.brickType.health -= balldamage;
       }
     }
   }
 
-///////////
+/////////// Effects
 
   void _increaseBallSpeed(Ball ball) {
     const double speedIncreaseFactor = 1.2;
     ball.velocity.scale(speedIncreaseFactor);
   }
 
-  void _applyPowerUpEffect() {
-    _boostSurroundingBricks();
+  void _applyShakeEffect(Vector2 position) {
+    EffectController controller = EffectController(
+      duration: 0.1, // Short burst of shake
+      reverseDuration: 0.1, // Reverse to bring back to original
+      curve: Curves.easeOut,
+    );
+
+    game.camera.viewfinder
+        .add(MoveEffect.by(Vector2(5, 5), controller, onComplete: () {
+      game.camera.viewfinder.add(MoveEffect.by(
+          Vector2(-5, -5), EffectController(duration: 0.1), onComplete: () {
+        game.camera.viewfinder.add(MoveEffect.by(
+          Vector2(5, 5),
+          EffectController(duration: 0.1),
+        ));
+      }));
+    }));
   }
 
-  void _boostSurroundingBricks() {
-    final List<Brick> surroundingBricks = game.getSurroundingBricks(Vector2(
-        tileData.position.dx, tileData.position.dy)); // Get surrounding bricks
+  void _applyHealingEffect() {
+    List<Brick> surroundingBricks =
+        getSurroundingBricks(this); // Get surrounding bricks
     for (var brick in surroundingBricks) {
       if (brick.tileData.brickType.isBreakable) {
-        brick.tileData.brickType.health += 50;
+        brick.tileData.brickType.health += 20;
+        print(brick.tileData.color);
+        HealingText healingText = HealingText(text: '+20');
+        healingText.position = Vector2(
+            brick.position.x + size.x / 2, brick.position.y + size.y / 2);
+        game.world.add(healingText);
+        print(healingText.position);
       }
     }
   }
 
-///////////////
+  List<Brick> getSurroundingBricks(Brick targetBrick) {
+    List<Brick> surroundingBricks = [];
+    double column = targetBrick.tileData.position.dx;
+    double row = targetBrick.tileData.position.dy;
+    List<Offset> surroundingPositions = [
+      Offset(column - 1, row - 1),
+      Offset(column, row - 1),
+      Offset(column + 1, row - 1),
+      Offset(column - 1, row),
+      Offset(column + 1, row),
+      Offset(column - 1, row + 1),
+      Offset(column, row + 1),
+      Offset(column + 1, row + 1),
+    ];
+    for (Offset offset in surroundingPositions) {
+      Brick? brick = _getBrickAtGridPosition(offset);
+      if (brick != null) {
+        surroundingBricks.add(brick);
+      }
+    }
 
-  void _triggerExplosionEffect() {
-    final List<Brick> surroundingBricks = game.getSurroundingBricks(
-        Vector2(tileData.position.dx, tileData.position.dy));
+    return surroundingBricks;
+  }
 
-    for (var brick in surroundingBricks) {
-      // Trigger particle effect before removing the brick
-      _addExplosionEffect(brick.position, brick.size);
+  Brick? _getBrickAtGridPosition(Offset gridPosition) {
+    Iterable<Brick> allBricks = game.world.children.query<Brick>();
+    for (Brick brick in allBricks) {
+      if (brick.tileData.position == gridPosition) {
+        return brick;
+      }
+    }
+    return null;
+  }
 
-      // Remove the brick
-      brick.removeFromParent(); // Destroy surrounding bricks
+  void _applyPowerUpEffect() {
+    PowerUpSpawner spawner = PowerUpSpawner();
+    Vector2 spawnPosition =
+        Vector2(position.x + size.x / 2 - 20, position.y + size.y / 2);
+    spawner.applyPowerUpEffect(spawnPosition, game);
+  }
+
+//////////////
+}
+
+class HealingText extends PositionComponent {
+  String text;
+  double duration;
+  Paint textPaint;
+
+  HealingText({
+    required this.text,
+    this.duration = 20.5,
+    Color color = Colors.black,
+  }) : textPaint = Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
+
+  @override
+  Future<void> onLoad() async {}
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    // Move upwards over time
+    print(position.y);
+    position.y -= 100 * dt; // Adjust speed as needed
+    // Fade out
+    textPaint.color = textPaint.color
+        .withOpacity(textPaint.color.opacity - 10 * dt / duration);
+
+    // Remove this component if fully transparent
+    if (textPaint.color.opacity < 0.1) {
+      removeFromParent();
     }
   }
 
-  void _addExplosionEffect(Vector2 position, Vector2 size) {
-    final explosionEffect = ParticleSystemComponent(
-      position: position,
-      particle: Particle.generate(
-        count: 20,
-        lifespan: 0.3, // Duration of the particle effect
-        generator: (i) => AcceleratedParticle(
-          acceleration: Vector2(0, 200),
-          speed: Vector2.random() * 200,
-          position: position,
-          child: CircleParticle(
-            radius: size.x / 10,
-            paint: Paint()..color = Colors.red,
-          ),
-        ),
-      ),
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+
+    // Set up the text style
+    TextStyle textStyle = TextStyle(
+      color: textPaint.color,
+      fontSize: 21,
+      fontWeight: FontWeight.bold,
     );
 
-    game.world.add(explosionEffect); // Add the effect to the game world
+    TextSpan textSpan = TextSpan(text: text, style: textStyle);
+    TextPainter textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout();
+
+    // Center the text over its position
+    textPainter.paint(canvas, Offset(0, 0));
+  }
+}
+
+enum PowerUpType {
+  ballClone,
+  maxDamageBall,
+  speedUpBall,
+}
+
+class PowerUpItems extends PositionComponent
+    with CollisionCallbacks, HasGameReference<BrickBreaker> {
+  String imagePath; // Path to the power-up item image
+  PowerUpType type; // Use enum instead of string
+  late Sprite sprite; // Sprite representation of the image
+
+  PowerUpItems({
+    required this.imagePath,
+    required this.type,
+  }) {
+    add(RectangleHitbox());
   }
 
-///////////////
+  @override
+  Future<void> onLoad() async {
+    sprite = await Sprite.load(imagePath);
+    size = Vector2(40, 40);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (position.y > game.size.y) {
+      removeFromParent();
+    }
+    position.y += 100 * dt;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    sprite.render(canvas, position: Vector2(0, 0), size: size);
+  }
+
+  @override
+  void onCollisionStart(
+      Set<Vector2> intersectionPoints, PositionComponent other) {
+    super.onCollisionStart(intersectionPoints, other);
+
+    if (other is Bat) {
+      switch (type) {
+        case PowerUpType.ballClone:
+          game.handleBallClonePowerUp();
+          break;
+        case PowerUpType.maxDamageBall:
+          game.handleMaxDamageBallPowerUp();
+          break;
+        case PowerUpType.speedUpBall:
+          game.handleSpeedUpBallPowerUp();
+          break;
+      }
+      removeFromParent(); // Remove the power-up once picked up
+    }
+  }
+}
+
+class PowerUpSpawner {
+  // Predefined power-ups
+  final List<PowerUpItems> _predefinedPowerUps;
+
+  PowerUpSpawner()
+      : _predefinedPowerUps = [
+          PowerUpItems(imagePath: 'ballclone.png', type: PowerUpType.ballClone),
+          PowerUpItems(
+              imagePath: 'ballmaxdamage.png', type: PowerUpType.maxDamageBall),
+          PowerUpItems(
+              imagePath: 'speedupball.png', type: PowerUpType.speedUpBall),
+        ];
+
+  void applyPowerUpEffect(Vector2 spawnPosition, BrickBreaker game) {
+    // Select a random power-up from predefined list
+    final PowerUpItems powerUpItem =
+        _predefinedPowerUps[Math.Random().nextInt(_predefinedPowerUps.length)];
+
+    // Set position and add to the game world
+    powerUpItem.position = spawnPosition;
+    game.world.add(powerUpItem);
+  }
 }

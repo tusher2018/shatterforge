@@ -90,6 +90,22 @@ class Ball extends CircleComponent
         velocity.x = -velocity.x;
       }
       velocity.setFrom(velocity * difficultyModifier);
+    } else if (other is Ball) {
+      handleBallCollision(other);
+    }
+  }
+
+  void handleBallCollision(Ball otherBall) {
+    Vector2 delta = position - otherBall.position;
+    double distance = delta.length;
+    double minDist = radius + otherBall.radius;
+
+    if (distance < minDist) {
+      delta.normalize();
+      velocity.setFrom(
+          otherBall.velocity - delta.scaled(2 * otherBall.velocity.dot(delta)));
+      otherBall.velocity
+          .setFrom(velocity - delta.scaled(2 * velocity.dot(delta)));
     }
   }
 }

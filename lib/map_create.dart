@@ -52,11 +52,11 @@ class _MapCreatePageState extends State<MapCreatePage> {
   Map<String, int> brickCounts = {
     'Standard': 0,
     'Unbreakable': 0,
-    'Explosive': 0,
+    'Shake': 0,
     'Invisible': 0,
     'Speed': 0,
     'Multi-Hit': 0,
-    'Power-Up': 0,
+    'Healing': 0,
   };
 
   int totalBricks = 100;
@@ -69,11 +69,11 @@ class _MapCreatePageState extends State<MapCreatePage> {
     brickTypes = [
       BrickType('Standard', 10000, widget.playerData.standardWallHealth, true),
       BrickType('Unbreakable', 25, 100, false),
-      BrickType('Explosive', 5, widget.playerData.explosiveWallHealth, true),
+      BrickType('Shake', 5, widget.playerData.shakeWallHealth, true),
       BrickType('Speed', 5, widget.playerData.speedWallHealth, true),
       BrickType('Invisible', 5, widget.playerData.invisibleWallHealth, true),
       BrickType('Multi-Hit', 10, widget.playerData.multiHitWallHealth, true),
-      BrickType('Power-Up', 5, widget.playerData.powerUpWallHealth, true),
+      BrickType('Healing', 5, widget.playerData.healingWallHealth, true),
     ];
     selectedBrickType = brickTypes[0].name;
     _importGrid();
@@ -185,7 +185,6 @@ class _MapCreatePageState extends State<MapCreatePage> {
     if (isReady) {
       Navigator.push(context, MaterialPageRoute(
         builder: (context) {
-          Config.initialize(context);
           return GameApp(
             gridData: gridData,
             playerModel: null,

@@ -18,12 +18,11 @@ class PlayerModel {
 
   // Brick Health Metrics
   int standardWallHealth;
-  int explosiveWallHealth;
+  int shakeWallHealth;
   int healingWallHealth;
   int invisibleWallHealth;
   int speedWallHealth;
   int multiHitWallHealth;
-  int powerUpWallHealth;
   int numberOfUnbreakableWall;
   int maxBrickLimit;
 
@@ -45,23 +44,22 @@ class PlayerModel {
       this.ballDamage = 50,
       this.totalBricksDestroyed = 0,
       this.standardWallHealth = 50,
-      this.explosiveWallHealth = 50,
+      this.shakeWallHealth = 50,
       this.healingWallHealth = 50,
       this.invisibleWallHealth = 50,
       this.speedWallHealth = 50,
       this.multiHitWallHealth = 50,
-      this.powerUpWallHealth = 50,
       this.numberOfUnbreakableWall = 25,
       this.maxBrickLimit = 100,
       Map<String, bool>? hasUpgradedThisLevel})
       : hasUpgradedThisLevel = hasUpgradedThisLevel ??
             {
               'Standard Wall': false,
-              'Explosive Wall': false,
+              'Shake Wall': false,
               'Speed Up Wall': false,
               'Invisible Wall': false,
               'Multi-Hit Wall': false,
-              'Power-Up Wall': false,
+              'Healing Wall': false,
               'Unbreakable Wall': false,
               'Ball Damage': false,
             };
@@ -83,12 +81,11 @@ class PlayerModel {
       'ballDamage': ballDamage,
       'totalBricksDestroyed': totalBricksDestroyed,
       'standardWallHealth': standardWallHealth,
-      'explosiveWallHealth': explosiveWallHealth,
+      'ShakeWallHealth': shakeWallHealth,
       'healingWallHealth': healingWallHealth,
       'invisibleWallHealth': invisibleWallHealth,
       'speedWallHealth': speedWallHealth,
       'multiHitWallHealth': multiHitWallHealth,
-      'powerUpWallHealth': powerUpWallHealth,
       'numberOfUnbreakableWall': numberOfUnbreakableWall,
       'maxBrickLimit': maxBrickLimit,
       'hasUpgradedThisLevel': hasUpgradedThisLevel,
@@ -109,26 +106,26 @@ class PlayerModel {
       baseLiked: map['baseLiked'] ?? 0,
       baseDisliked: map['baseDisliked'] ?? 0,
       level: map['level'] ?? 1,
-      ballDamage: map['ballDamage'] ?? 10,
+      ballDamage: map['ballDamage'] ?? 50,
       totalBricksDestroyed: map['totalBricksDestroyed'] ?? 0,
       standardWallHealth: map['standardWallHealth'] ?? 100,
-      explosiveWallHealth: map['explosiveWallHealth'] ?? 100,
+      shakeWallHealth: map['ShakeWallHealth'] ?? 100,
       healingWallHealth: map['healingWallHealth'] ?? 100,
       invisibleWallHealth: map['invisibleWallHealth'] ?? 100,
       speedWallHealth: map['speedWallHealth'] ?? 100,
       multiHitWallHealth: map['multiHitWallHealth'] ?? 100,
-      powerUpWallHealth: map['powerUpWallHealth'] ?? 100,
+
       numberOfUnbreakableWall: map['numberOfUnbreakableWall'] ?? 0,
       maxBrickLimit: map['maxBrickLimit'] ?? 100,
       hasUpgradedThisLevel: map['hasUpgradedThisLevel'] != null
           ? Map<String, bool>.from(map['hasUpgradedThisLevel'])
           : {
               'Standard Wall': false,
-              'Explosive Wall': false,
+              'Shake Wall': false,
               'Speed Up Wall': false,
               'Invisible Wall': false,
               'Multi-Hit Wall': false,
-              'Power-Up Wall': false,
+              'Healing Wall': false,
               'Unbreakable Wall': false,
               'Ball Damage': false,
             }, // Default map if null

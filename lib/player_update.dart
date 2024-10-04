@@ -19,55 +19,55 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
   // Map to track remaining time for each item
   Map<String, Duration> remainingTime = {
     'Standard Wall': Duration.zero,
-    'Explosive Wall': Duration.zero,
+    'Shake Wall': Duration.zero,
     'Speed Up Wall': Duration.zero,
     'Invisible Wall': Duration.zero,
     'Multi-Hit Wall': Duration.zero,
-    'Power-Up Wall': Duration.zero,
+    'Healing Wall': Duration.zero,
     'Unbreakable Wall': Duration.zero,
     'Ball Damage': Duration.zero,
   };
 
   Map<String, bool> isUpgrading = {
     'Standard Wall': false,
-    'Explosive Wall': false,
+    'Shake Wall': false,
     'Speed Up Wall': false,
     'Invisible Wall': false,
     'Multi-Hit Wall': false,
-    'Power-Up Wall': false,
+    'Healing Wall': false,
     'Unbreakable Wall': false,
     'Ball Damage': false,
   };
 
   Map<String, int> upgradeCounts = {
     'Standard Wall': 0,
-    'Explosive Wall': 0,
+    'Shake Wall': 0,
     'Speed Up Wall': 0,
     'Invisible Wall': 0,
     'Multi-Hit Wall': 0,
-    'Power-Up Wall': 0,
+    'Healing Wall': 0,
     'Unbreakable Wall': 0,
     'Ball Damage': 0,
   };
 
   Map<String, int> upgradeCost = {
     'Standard Wall': 20,
-    'Explosive Wall': 150,
+    'Shake Wall': 150,
     'Speed Up Wall': 120,
     'Invisible Wall': 200,
     'Multi-Hit Wall': 140,
-    'Power-Up Wall': 200,
+    'Healing Wall': 200,
     'Unbreakable Wall': 500,
     'Ball Damage': 50,
   };
 
   Map<String, Duration> upgradeTimes = {
     'Standard Wall': const Duration(seconds: 3),
-    'Explosive Wall': const Duration(seconds: 3),
+    'Shake Wall': const Duration(seconds: 3),
     'Speed Up Wall': const Duration(seconds: 3),
     'Invisible Wall': const Duration(seconds: 3),
     'Multi-Hit Wall': const Duration(seconds: 3),
-    'Power-Up Wall': const Duration(seconds: 3),
+    'Healing Wall': const Duration(seconds: 3),
     'Unbreakable Wall': const Duration(seconds: 3),
     'Ball Damage': const Duration(seconds: 3),
   };
@@ -164,11 +164,11 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
           _updatePlayerData(
               {'standardWallHealth': widget.playerModel.standardWallHealth});
           break;
-        case 'Explosive Wall':
-          widget.playerModel.explosiveWallHealth =
-              (widget.playerModel.explosiveWallHealth + 49);
+        case 'Shake Wall':
+          widget.playerModel.shakeWallHealth =
+              (widget.playerModel.shakeWallHealth + 49);
           _updatePlayerData(
-              {'explosiveWallHealth': widget.playerModel.explosiveWallHealth});
+              {'ShakeWallHealth': widget.playerModel.shakeWallHealth});
           break;
         case 'Speed Up Wall':
           widget.playerModel.speedWallHealth =
@@ -188,11 +188,11 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
           _updatePlayerData(
               {'multiHitWallHealth': widget.playerModel.multiHitWallHealth});
           break;
-        case 'Power-Up Wall':
-          widget.playerModel.powerUpWallHealth =
-              (widget.playerModel.powerUpWallHealth + 49);
+        case 'Healing Wall':
+          widget.playerModel.healingWallHealth =
+              (widget.playerModel.healingWallHealth + 49);
           _updatePlayerData(
-              {'powerUpWallHealth': widget.playerModel.powerUpWallHealth});
+              {'healingWallHealth': widget.playerModel.healingWallHealth});
           break;
         case 'Unbreakable Wall':
           widget.playerModel.numberOfUnbreakableWall =
@@ -415,16 +415,16 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
                   onUpgrade: () => _upgradeItem('Standard Wall', player.level),
                 ),
                 _buildUpgradeCard(
-                  itemName: 'Explosive Wall',
+                  itemName: 'Shake Wall',
                   imagePath: 'assets/images/explosive_wall.png',
-                  currentValue: player.explosiveWallHealth,
-                  cost: upgradeCost['Explosive Wall']!,
-                  upgradeTime: upgradeTimes['Explosive Wall']!,
-                  onUpgrade: () => _upgradeItem('Explosive Wall', player.level),
+                  currentValue: player.shakeWallHealth,
+                  cost: upgradeCost['Shake Wall']!,
+                  upgradeTime: upgradeTimes['Shake Wall']!,
+                  onUpgrade: () => _upgradeItem('Shake Wall', player.level),
                 ),
                 _buildUpgradeCard(
                   itemName: 'Speed Up Wall',
-                  imagePath: 'assets/images/standard_wall.png',
+                  imagePath: 'assets/images/speedup.png',
                   currentValue: player.speedWallHealth,
                   cost: upgradeCost['Speed Up Wall']!,
                   upgradeTime: upgradeTimes['Speed Up Wall']!,
@@ -447,12 +447,12 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
                   onUpgrade: () => _upgradeItem('Multi-Hit Wall', player.level),
                 ),
                 _buildUpgradeCard(
-                  itemName: 'Power-Up Wall',
-                  imagePath: 'assets/images/powerup_wall.png',
-                  currentValue: player.powerUpWallHealth,
-                  cost: upgradeCost['Power-Up Wall']!,
-                  upgradeTime: upgradeTimes['Power-Up Wall']!,
-                  onUpgrade: () => _upgradeItem('Power-Up Wall', player.level),
+                  itemName: 'Healing Wall',
+                  imagePath: 'assets/images/healing_wall.png',
+                  currentValue: player.healingWallHealth,
+                  cost: upgradeCost['Healing Wall']!,
+                  upgradeTime: upgradeTimes['Healing Wall']!,
+                  onUpgrade: () => _upgradeItem('Healing Wall', player.level),
                 ),
                 _buildUpgradeCard(
                   itemName: 'Unbreakable Wall',

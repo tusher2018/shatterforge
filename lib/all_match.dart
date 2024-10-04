@@ -34,6 +34,9 @@ class _AllMatchState extends State<AllMatch>
     super.initState();
     _playableMapsFuture = _fetchPlayableMaps();
     _tabController = TabController(length: categories.length, vsync: this);
+    if (widget.playerModel != null) {
+      balldamage = widget.playerModel!.ballDamage;
+    }
   }
 
   Future<List<GridData>> _fetchPlayableMaps() async {
@@ -160,7 +163,6 @@ class _AllMatchState extends State<AllMatch>
                               onTap: () {
                                 Navigator.push(context, MaterialPageRoute(
                                   builder: (context) {
-                                    Config.initialize(context);
                                     return GameApp(
                                       gridData: gridData,
                                       playerModel: widget.playerModel,
