@@ -67,6 +67,8 @@ void showCommonSnackbar(
   Duration duration = const Duration(seconds: 3),
   bool isDismissible = true,
 }) {
+  // Dismiss any existing SnackBars before showing a new one
+  ScaffoldMessenger.of(context).clearSnackBars();
   final snackBar = SnackBar(
     content: Row(
       children: [
@@ -78,9 +80,10 @@ void showCommonSnackbar(
           ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(
+          child: commonText(
             message,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
+            color: Colors.white,
+            size: 16,
           ),
         ),
       ],
@@ -92,9 +95,7 @@ void showCommonSnackbar(
         ? SnackBarAction(
             label: 'DISMISS',
             textColor: Colors.yellowAccent,
-            onPressed: () {
-              // Code to dismiss
-            },
+            onPressed: ScaffoldMessenger.of(context).hideCurrentSnackBar,
           )
         : null,
   );

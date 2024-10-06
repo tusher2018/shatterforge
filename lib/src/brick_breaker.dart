@@ -128,7 +128,7 @@ class BrickBreaker extends FlameGame
         break;
       case 0:
         playState = PlayState.gameOver; // Game over if no lives left
-        world.remove(ball);
+        world.removeAll(world.children.query<Ball>());
         world.remove(bat);
         return; // Exit the function
     }

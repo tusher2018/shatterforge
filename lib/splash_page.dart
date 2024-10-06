@@ -26,6 +26,7 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
   bool _exitingSignInForm = false;
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
+  DateTime? lastPressed;
 
   // Transition to Sign-In form with exit animation for buttons
   void _transitionToSignInForm() {
@@ -218,7 +219,22 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
+    return WillPopScope(
+      onWillPop: () async {
+        DateTime now = DateTime.now();
+        if (lastPressed == null ||
+            now.difference(lastPressed!) > Duration(seconds: 2)) {
+          // Save the last pressed time
+          lastPressed = now;
+
+          showCommonSnackbar(context,
+              message: 'Press back again to exit', isDismissible: false);
+          // Prevent the app from quitting
+          return false;
+        }
+        // Allow the app to quit
+        return true;
+      },
       child: Scaffold(
         body: Stack(
           fit: StackFit.expand,
@@ -368,7 +384,7 @@ class _CombinedSplashHomePageState extends State<CombinedSplashHomePage> {
                                   "assets/images/settings.png",
                                   delay: 1500,
                                   exitButton: _exitButtons,
-                                  "Settings",
+                                  "Store",
                                   () {}),
                             ],
                           )

@@ -26,7 +26,7 @@ class Ball extends CircleComponent
   final Vector2 velocity;
 
   final double difficultyModifier; // Add this member
-
+  static const double minYVelocity = 0.5;
   @override
   void update(double dt) {
     super.update(dt);
@@ -50,8 +50,7 @@ class Ball extends CircleComponent
       position.y = radius;
       velocity.y = -velocity.y;
     } else if (position.y + radius >= game.height) {
-      // Bottom side (game over)
-      // game.playState = PlayState.gameOver;
+      game.world.remove(this);
     }
   }
 
@@ -106,6 +105,16 @@ class Ball extends CircleComponent
           otherBall.velocity - delta.scaled(2 * otherBall.velocity.dot(delta)));
       otherBall.velocity
           .setFrom(velocity - delta.scaled(2 * velocity.dot(delta)));
+    }
+    double adjustedYVelocity =
+        velocity.y.isNegative ? -minYVelocity : minYVelocity;
+
+    if (velocity.y.abs() < minYVelocity) {
+      velocity.y = adjustedYVelocity;
+    }
+
+    if (otherBall.velocity.y.abs() < minYVelocity) {
+      otherBall.velocity.y = adjustedYVelocity;
     }
   }
 }

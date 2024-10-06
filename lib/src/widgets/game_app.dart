@@ -378,9 +378,9 @@ class _GameAppState extends State<GameApp> {
                               icon: Icons.error,
                             );
                           }
-                          Navigator.pop(context);
                         }
-                        Navigator.pop(context);
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
                       },
                       child: const Text(
                         "Go to Home",
