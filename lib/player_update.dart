@@ -196,7 +196,7 @@ class _PlayerUpgradePageState extends State<PlayerUpgradePage> {
           break;
         case 'Unbreakable Wall':
           widget.playerModel.numberOfUnbreakableWall =
-              (widget.playerModel.numberOfUnbreakableWall + 1).clamp(25, 35);
+              (widget.playerModel.numberOfUnbreakableWall + 5);
           _updatePlayerData({
             'numberOfUnbreakableWall':
                 widget.playerModel.numberOfUnbreakableWall

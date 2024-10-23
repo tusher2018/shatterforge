@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-const difficultyModifier = 1.02;
+const difficultyModifier = 1.05;
 
 const primaryColor = Color(0xFFEFEF5CE);
 int maxLevel = 13; // Maximum level the player can reach
 
-double ballRadius = 8.0;
-double batWidth = 100;
-double batHeight = 16;
+double ballRadius = 4.0;
+double batWidth = 80;
+double batHeight = 10;
 double batStep = 15;
 
 int balldamage = 50;
