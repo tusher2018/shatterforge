@@ -238,46 +238,80 @@ class Brick extends PositionComponent
   void render(Canvas canvas) {
     super.render(canvas);
 
-    super.render(canvas);
+/////////
+
+    Paint shadowPaint = Paint()
+      ..color = (tileData.brickType.name == "Invisible" &&
+              tileData.color == Colors.transparent)
+          ? Colors.transparent
+          : Colors.black.withOpacity(0.5)
+      ..style = PaintingStyle.fill;
+    Offset shadowOffset = Offset(1, 1);
+
+////////////////
 
     Paint fillPaint = Paint()
       ..color = tileData.color
       ..style = PaintingStyle.fill;
 
-    Rect tileRect = Rect.fromLTWH(0, 0, size.x, size.y);
+    Rect tileRect = Rect.fromLTWH(0, 0, size.x * 0.98, size.y * 0.98);
+    Rect tileRectShadow = Rect.fromLTWH(0, 0, size.x, size.y);
 
     switch (tileData.shape) {
       case 'Ellipse':
+        // canvas.drawOval(tileRect, fillPaint);
+        canvas.drawOval(tileRectShadow.shift(shadowOffset), shadowPaint);
         canvas.drawOval(tileRect, fillPaint);
         break;
       case 'Triangle':
+        _drawTriangle(canvas, shadowPaint, tileRectShadow.shift(shadowOffset),
+            basePosition: tileData.basePosition ?? 'Bottom');
         _drawTriangle(canvas, fillPaint, tileRect,
             basePosition: tileData.basePosition ?? 'Bottom');
         break;
       case 'Right Triangle':
+        _drawRightTriangle(
+            canvas, shadowPaint, tileRectShadow.shift(shadowOffset),
+            orientation: tileData.orientation ?? 'Bottom-left');
+
         _drawRightTriangle(canvas, fillPaint, tileRect,
             orientation: tileData.orientation ?? 'Bottom-left');
         break;
       case 'Rectangle':
+        canvas.drawRect(tileRectShadow.shift(shadowOffset), shadowPaint);
         canvas.drawRect(tileRect, fillPaint);
         break;
       case 'Parallelogram':
+        _drawParallelogram(
+            canvas, shadowPaint, tileRectShadow.shift(shadowOffset),
+            slantDirection: tileData.basePosition ?? 'Right');
+
         _drawParallelogram(canvas, fillPaint, tileRect,
             slantDirection: tileData.basePosition ?? 'Right');
         break;
       case 'Trapezium':
+        _drawTrapezoid(canvas, shadowPaint, tileRectShadow.shift(shadowOffset),
+            basePosition: tileData.basePosition ?? 'Bottom');
+
         _drawTrapezoid(canvas, fillPaint, tileRect,
             basePosition: tileData.basePosition ?? 'Bottom');
         break;
       case 'Hexagon':
+        _drawPolygon(canvas, shadowPaint, tileRectShadow.shift(shadowOffset), 6,
+            rotationAngle: tileData.rotationAngle ?? 0);
+
         _drawPolygon(canvas, fillPaint, tileRect, 6,
             rotationAngle: tileData.rotationAngle ?? 0);
         break;
       case 'Pentagon':
+        _drawPolygon(canvas, shadowPaint, tileRectShadow.shift(shadowOffset), 5,
+            rotationAngle: tileData.rotationAngle ?? 0);
+
         _drawPolygon(canvas, fillPaint, tileRect, 5,
             rotationAngle: tileData.rotationAngle ?? 0);
         break;
       case 'Kite':
+        _drawKite(canvas, shadowPaint, tileRectShadow.shift(shadowOffset));
         _drawKite(canvas, fillPaint, tileRect);
         break;
     }
@@ -502,13 +536,13 @@ class Brick extends PositionComponent
     if (other is Ball) {
       if (tileData.brickType.name == "Invisible" &&
           tileData.color == Colors.transparent) {
-        tileData.color = Colors.white;
-      }
-      if (Math.Random().nextDouble() < 0.3 && Math.Random().nextBool()) {
-        _applyPowerUpEffect();
+        tileData.color = Colors.blue;
       }
 
       if (tileData.brickType.health <= 0) {
+        if (Math.Random().nextDouble() < 0.3 && Math.Random().nextBool()) {
+          _applyPowerUpEffect();
+        }
         switch (tileData.brickType.name) {
           case 'Speed':
             _increaseBallSpeed(other);
